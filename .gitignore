@@ -1,0 +1,70 @@
+# --- Python / Flask ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.log
+*.sqlite3
+*.db
+instance/
+.env
+.venv/
+venv/
+.env.*
+*.swp
+.DS_Store
+
+# Byte-compiled / compiled files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Flask settings / secrets
+*.env
+*.env.local
+.env.*
+*.bak
+
+# --- React / Vite frontend ---
+web/node_modules/
+web/dist/
+web/.vite/
+web/.DS_Store
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/package-lock.json
+web/.eslintcache
+
+# --- Data & results ---
+data/*.csv
+data/*.json~
+results/
+*.parquet
+*.tmp
+*.bak
+
+# --- OS & IDE files ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.suo
+*.user
+*.sln.docstates
+
+# --- Archives / generated ---
+*.zip
+*.tar
+*.gz
+*.tgz
