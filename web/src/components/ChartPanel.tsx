@@ -1,82 +1,86 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import embed from 'vega-embed'
 import { lineBase } from '../vega/lineBase'
-import { overlayExtrema } from '../vega/overlayExtrema'
-import { overlayChangePoints } from '../vega/overlayRegimes'
+import { 
+  overlayExtrema, 
+  overlayChangePoints, 
+  overlayRegimes, 
+  overlaySpikes,
+  overlayTrend,
+  overlayNoise,
+  overlaySlope,
+  overlayCurvature,
+  overlayRegression,
+  overlayLevel,
+  overlayMean,
+  overlayPeriodicity,
+  overlayRoughness,
+  prepareFeatureData
+} from '../vega/overlayFeatures'
 
 type Props = {
   orig: {t:number,y:number}[],
   smooth: {t:number,y:number}[],
-  overlays: {extrema?: any[], changePoints?: any[]},
+  overlays: any,
   aspect: number,
-  method: string
+  method: string,
+  selectedFeature: string
 }
 
-// Algorithm color mapping - distinctive colors for each algorithm
+// Algorithm color mapping - cohesive palette with distinct categories
 const getAlgorithmColor = (method: string): string => {
   const colorMap: Record<string, string> = {
-    // Transformers - Blue/Purple tones
-    'gaussian_filter': '#2196F3',        // Blue
-    'median_filter': '#9C27B0',          // Purple
-    'mean_filter': '#3F51B5',            // Indigo
-    'moving_average': '#673AB7',         // Deep Purple
-    'savitzky_golay_filter': '#00BCD4',  // Cyan
-    'butterworth_filter': '#03A9F4',     // Light Blue
-    'fft_cutoff_filter': '#006064',      // Dark Cyan
-    'chebyshev_filter': '#1A237E',       // Dark Blue
+    // Transformers - Cool blues and teals
+    'gaussian_filter': '#1E88E5',        // Vivid Blue
+    'median_filter': '#039BE5',          // Light Blue
+    'mean_filter': '#00ACC1',            // Cyan
+    'moving_average': '#00897B',         // Teal
+    'savitzky_golay_filter': '#43A047',  // Green
+    'butterworth_filter': '#7CB342',     // Light Green
+    'fft_cutoff_filter': '#C0CA33',      // Lime
+    'chebyshev_filter': '#FDD835',       // Yellow
     
-    // Reducers - Green/Teal tones
-    'lttb_downsample': '#4CAF50',        // Green
-    'm4_downsample': '#009688',          // Teal
-    'rdp_downsample': '#8BC34A',         // Light Green
-    'minmaxlttb_downsample': '#00796B',  // Dark Teal
-    'uniform_subsample_downsample': '#558B2F', // Olive Green
-    'fpcs_downsample': '#2E7D32',        // Dark Green
-    'tda_downsample': '#1B5E20',         // Very Dark Green
+    // Reducers - Warm oranges and reds
+    'lttb_downsample': '#FB8C00',        // Orange
+    'm4_downsample': '#F4511E',          // Deep Orange
+    'rdp_downsample': '#E53935',         // Red
+    'minmaxlttb_downsample': '#D81B60',  // Pink
+    'uniform_subsample_downsample': '#8E24AA', // Purple
+    'fpcs_downsample': '#5E35B1',        // Deep Purple
+    'tda_downsample': '#3949AB',         // Indigo
     
-    // Aggregators - Orange/Red tones
-    'asap_aggregator': '#FF5722',        // Deep Orange
-    'bin_average_aggregator': '#FF9800', // Orange
+    // Aggregators - Browns and earth tones
+    'asap_aggregator': '#6D4C41',        // Brown
+    'bin_average_aggregator': '#8D6E63', // Light Brown
   };
   
-  return colorMap[method] || '#E91E63'; // Default to Pink if not found
+  return colorMap[method] || '#9E9E9E'; // Default to Gray if not found
 };
 
-export default function ChartPanel({orig, smooth, overlays, aspect, method}: Props){
+export default function ChartPanel({orig, smooth, overlays, aspect, method, selectedFeature}: Props){
   const ref = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({width: 800, height: 400})
-  
-  useEffect(() => {
-    if(!ref.current) return;
-    
-    // Measure the actual available width in the container
-    const containerWidth = ref.current.parentElement?.clientWidth || 800;
-    // Account for padding (24px on each side from App.tsx)
-    const availableWidth = containerWidth - 48;
-    const W = Math.max(400, Math.min(availableWidth, 900)); // Cap at 900px for readability
-    
-    // Height calculation for 45° banking
-    // aspect is the median slope (|dy/dx|)
-    // For 45° visual angle: physical_height / physical_width = aspect
-    const H = Math.max(250, Math.min(Math.round(W * aspect), 600)); // Cap at 600px
-    
-    setDimensions({width: W, height: H});
-  }, []); // Only calculate once on mount, don't change with aspect
   
   useEffect(()=>{
     if(!ref.current) return;
     
-    const {width: W, height: H} = dimensions;
+    console.log('ChartPanel overlays:', overlays);
+    console.log('ChartPanel selectedFeature:', selectedFeature);
+    
+    // Get container dimensions - simple fixed size approach
+    const W = 800;  // Fixed width that fits well in the layout
+    const H = 450;  // Fixed height for consistent display
+    
     const base = lineBase(W, H)
     
     const algorithmColor = getAlgorithmColor(method);
     
+    // Show original in gray background, simplified series on top
     const layers:any[] = [
       { 
         data: {name:'orig'}, 
         mark: {
           type:'line', 
-          color: '#BDBDBD',  // Faint gray for original
+          color: '#757575',  // Darker gray for original
           strokeWidth: 1.5,
           opacity: 0.5
         } 
@@ -86,26 +90,225 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method}: Pro
         mark: {
           type:'line',
           color: algorithmColor,
-          strokeWidth: 2.5
+          strokeWidth: 2.5,
+          opacity: 1.0
         } 
       },
     ]
     
-    if(overlays.extrema) layers.push(...overlayExtrema() as any)
-    if(overlays.changePoints) layers.push(...overlayChangePoints() as any)
+    // Add overlay based on selected feature
+    // Now handling both original (blue) and simplified (orange) features
+    let featureOverlays: any[] = [];
+    const datasets: any = {
+      orig: orig,
+      smooth: smooth
+    };
+    
+    console.log('overlays structure:', overlays);
+    console.log('selectedFeature:', selectedFeature);
+    
+    if (selectedFeature !== 'none' && overlays) {
+      const origFeatures = overlays.original || {};
+      const simpFeatures = overlays.simplified || {};
+      
+      console.log('origFeatures:', origFeatures);
+      console.log('simpFeatures:', simpFeatures);
+      
+      const processFeature = (features: any, color: string, suffix: string) => {
+        const dataName = selectedFeature + suffix;
+        
+        switch(selectedFeature) {
+          case 'level':
+            if (features.level?.interval) {
+              datasets[dataName] = features.level.interval;
+              return overlayLevel(dataName).map((layer: any) => ({
+                ...layer,
+                mark: {...layer.mark, color: color}
+              }));
+            }
+            break;
+          case 'mean':
+            if (features.mean?.mu !== undefined) {
+              return overlayMean(features.mean.mu).map((layer: any) => ({
+                ...layer,
+                mark: {...layer.mark, color: color}
+              }));
+            }
+            break;
+          case 'extrema':
+            if (features.extrema) {
+              datasets[dataName] = features.extrema;
+              return overlayExtrema(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'changePoints':
+            if (features.changePoints) {
+              datasets[dataName] = features.changePoints;
+              return overlayChangePoints(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'regimes':
+            if (features.regimes) {
+              datasets[dataName] = features.regimes.map((r: any) => ({
+                ...r,
+                baselineMin: r.baseline - 0.5,
+                baselineMax: r.baseline + 0.5
+              }));
+              return overlayRegimes(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'spikesDips':
+            if (features.spikesDips) {
+              datasets[dataName] = features.spikesDips;
+              return overlaySpikes(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'trend':
+            if (features.trend?.values) {
+              datasets[dataName] = features.trend.values.map((v: number, i: number) => ({t: i+1, value: v}));
+              return overlayTrend(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'noise':
+            if (features.noise?.values) {
+              datasets[dataName] = features.noise.values.map((v: number, i: number) => ({t: i+1, value: v}));
+              return overlayNoise(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'slope':
+            if (features.slope?.values) {
+              datasets[dataName] = features.slope.values.map((v: number, i: number) => ({
+                t: features.slope.index?.[i] || i+1,
+                value: v
+              }));
+              return overlaySlope(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'curvature':
+            if (features.curvature?.values) {
+              datasets[dataName] = features.curvature.values.map((v: number, i: number) => ({
+                t: features.curvature.index?.[i] || i+2,
+                value: v
+              }));
+              return overlayCurvature(dataName).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'regression':
+            if (features.regression) {
+              return overlayRegression(smooth, features.regression.alpha || 0, features.regression.beta || 0).map((layer: any) => ({
+                ...layer,
+                encoding: {
+                  ...layer.encoding,
+                  color: {value: color}
+                }
+              }));
+            }
+            break;
+          case 'periodicity':
+            if (features.periodicity) {
+              return overlayPeriodicity(features.periodicity.period || 0, features.periodicity.dominant_frequency || 0).map((layer: any) => ({
+                ...layer,
+                mark: {...layer.mark, color: color}
+              }));
+            }
+            break;
+          case 'roughness':
+            if (features.roughness?.value !== undefined) {
+              return overlayRoughness(features.roughness.value).map((layer: any) => ({
+                ...layer,
+                mark: {...layer.mark, color: color}
+              }));
+            }
+            break;
+        }
+        return [];
+      };
+      
+      // Add original features in blue
+      const origOverlays = processFeature(origFeatures, '#2196F3', '_orig');
+      if (origOverlays.length > 0) {
+        featureOverlays.push(...origOverlays);
+      }
+      
+      // Add simplified features in orange
+      const simpOverlays = processFeature(simpFeatures, '#FF9800', '_simp');
+      if (simpOverlays.length > 0) {
+        featureOverlays.push(...simpOverlays);
+      }
+    }
+    
+    console.log('Feature overlays:', {
+      selectedFeature,
+      overlayCount: featureOverlays.length,
+      datasetKeys: Object.keys(datasets)
+    });
+    
+    // Add feature overlay layers if available
+    if (featureOverlays.length > 0) {
+      layers.push(...featureOverlays);
+    }
 
     const spec:any = {
       ...base,
       layer: layers,
-      datasets:{
-        orig: orig,
-        smooth: smooth,
-        extrema: overlays.extrema || [],
-        changePoints: overlays.changePoints || []
-      }
+      datasets: datasets
     }
+    
+    console.log('Vega spec:', {
+      layerCount: layers.length,
+      datasetKeys: Object.keys(datasets)
+    });
+    
     embed(ref.current, spec, {actions:false})
-  }, [orig, smooth, overlays, method, dimensions])
+  }, [orig, smooth, overlays, method, selectedFeature])
   
-  return <div ref={ref} style={{width: '100%', maxWidth: '100%', overflow: 'visible'}} />
+  return <div ref={ref} style={{width: '100%', maxWidth: '900px'}} />
 }

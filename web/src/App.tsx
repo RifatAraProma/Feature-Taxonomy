@@ -5,48 +5,50 @@ import ChartPanel from './components/ChartPanel'
 import MetricsBar from './components/MetricsBar'
 import { getSeries, postSmooth } from './api'
 
-// Algorithm color mapping - distinctive colors for each algorithm
+// Algorithm color mapping - cohesive palette with distinct categories
+// Using softer, more harmonious colors
 const getAlgorithmColor = (method: string): string => {
   const colorMap: Record<string, string> = {
-    // Transformers - Blue/Purple tones
-    'gaussian_filter': '#2196F3',        // Blue
-    'median_filter': '#9C27B0',          // Purple
-    'mean_filter': '#3F51B5',            // Indigo
-    'moving_average': '#673AB7',         // Deep Purple
-    'savitzky_golay_filter': '#00BCD4',  // Cyan
-    'butterworth_filter': '#03A9F4',     // Light Blue
-    'fft_cutoff_filter': '#006064',      // Dark Cyan
-    'chebyshev_filter': '#1A237E',       // Dark Blue
+    // Transformers - Cool blues and teals
+    'gaussian_filter': '#1E88E5',        // Vivid Blue
+    'median_filter': '#039BE5',          // Light Blue
+    'mean_filter': '#00ACC1',            // Cyan
+    'moving_average': '#00897B',         // Teal
+    'savitzky_golay_filter': '#43A047',  // Green
+    'butterworth_filter': '#7CB342',     // Light Green
+    'fft_cutoff_filter': '#C0CA33',      // Lime
+    'chebyshev_filter': '#FDD835',       // Yellow
     
-    // Reducers - Green/Teal tones
-    'lttb_downsample': '#4CAF50',        // Green
-    'm4_downsample': '#009688',          // Teal
-    'rdp_downsample': '#8BC34A',         // Light Green
-    'minmaxlttb_downsample': '#00796B',  // Dark Teal
-    'uniform_subsample_downsample': '#558B2F', // Olive Green
-    'fpcs_downsample': '#2E7D32',        // Dark Green
-    'tda_downsample': '#1B5E20',         // Very Dark Green
+    // Reducers - Warm oranges and reds
+    'lttb_downsample': '#FB8C00',        // Orange
+    'm4_downsample': '#F4511E',          // Deep Orange
+    'rdp_downsample': '#E53935',         // Red
+    'minmaxlttb_downsample': '#D81B60',  // Pink
+    'uniform_subsample_downsample': '#8E24AA', // Purple
+    'fpcs_downsample': '#5E35B1',        // Deep Purple
+    'tda_downsample': '#3949AB',         // Indigo
     
-    // Aggregators - Orange/Red tones
-    'asap_aggregator': '#FF5722',        // Deep Orange
-    'bin_average_aggregator': '#FF9800', // Orange
+    // Aggregators - Browns and earth tones
+    'asap_aggregator': '#6D4C41',        // Brown
+    'bin_average_aggregator': '#8D6E63', // Light Brown
   };
   
-  return colorMap[method] || '#E91E63'; // Default to Pink if not found
+  return colorMap[method] || '#9E9E9E'; // Default to Gray if not found
 };
 
 export default function App(){
-  const [dataset, setDataset] = useState('series_001')
+  const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Now 0-100 simplification level
   const [orig, setOrig] = useState<{t:number,y:number}[]>([])
   const [smooth, setSmooth] = useState<{t:number,y:number}[]>([])
   const [metrics, setMetrics] = useState<any>(null)
   const [aspect, setAspect] = useState(1.0)
-  const [showExtrema, setShowExtrema] = useState(true)
-  const [showCpts, setShowCpts] = useState(true)
+  const [selectedFeature, setSelectedFeature] = useState('none')
   const [overlays, setOverlays] = useState<any>({})
-
+  const [usePAECalibration, setUsePAECalibration] = useState(true)  // Default to true
+  const [paeValue, setPaeValue] = useState<number | null>(null)
+  
   useEffect(()=>{
     getSeries(dataset).then(d => {
       const pts = d.y.map((v:number,i:number)=>({t:i+1,y:v}))
@@ -94,24 +96,37 @@ export default function App(){
       params = { w: Math.max(1, Math.floor(1 + (param / 100) * 50)) };
     }
     
+    // Determine which features to request based on selectedFeature
+    let returnFeatures: string[] = [];
+    if (selectedFeature !== 'none') {
+      // Request all features for complete overlay support
+      // The backend will compute all 12+ features
+      returnFeatures = [
+        'level', 'mean', 'extrema', 'regimes', 'changePoints', 
+        'spikes', 'spikesDips', 'trend', 'noise', 
+        'slope', 'curvature', 'regression', 
+        'periodicity', 'roughness'
+      ];
+    }
+    
     postSmooth({
       seriesId: dataset,
       method: method,
       params: params,
-      returnFeatures: [showExtrema?'extrema':null, showCpts?'regimes':''].filter(Boolean),
-      banking: true
+      returnFeatures: returnFeatures,
+      banking: true,
+      usePAECalibration: usePAECalibration,
+      sliderLevel: param  // Pass the raw slider value (0-100)
     }).then(res => {
       setSmooth(res.yhat)
       setAspect(res.banking.aspect || 1.0)
       setMetrics(res.metrics)
-      setOverlays({
-        extrema: res.features?.extrema || [],
-        changePoints: res.features?.changePoints || []
-      })
+      setOverlays(res.features || {})
+      setPaeValue(res.pae || null)  // Capture PAE value
     }).catch(err => {
       console.error('Error applying algorithm:', err);
     })
-  }, [dataset, method, param, showExtrema, showCpts, orig])
+  }, [dataset, method, param, selectedFeature, orig, usePAECalibration])
 
   return (
     <div style={{
@@ -134,12 +149,16 @@ export default function App(){
           borderBottom: '1px solid #e0e0e0',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <h1 style={{margin: 0, fontSize: 24, fontWeight: 600, color: '#333'}}>
-            Temporal Data Feature Taxonomy
-          </h1>
-          <p style={{margin: '4px 0 0 0', fontSize: 14, color: '#666'}}>
-            Explore and analyze time series data with various algorithms
-          </p>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <div>
+              <h1 style={{margin: 0, fontSize: 24, fontWeight: 600, color: '#333'}}>
+                Temporal Data Feature Taxonomy
+              </h1>
+              <p style={{margin: '4px 0 0 0', fontSize: 14, color: '#666'}}>
+                Explore and analyze time series data with various algorithms
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Chart Area */}
@@ -148,28 +167,8 @@ export default function App(){
           padding: 24,
           overflow: 'auto'
         }}>
-          <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} />
+          <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
           <MetricsBar metrics={metrics} />
-          <div style={{marginTop: 12, display: 'flex', gap: 16, alignItems: 'center'}}>
-            <div style={{fontSize: 13, color: '#666'}}>
-              Aspect ratio (45° banking): {aspect.toFixed(2)}
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: 16,
-              fontSize: 13,
-              fontWeight: 500
-            }}>
-              <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                <div style={{width: 20, height: 3, backgroundColor: '#BDBDBD', opacity: 0.5}}></div>
-                <span style={{color: '#666'}}>Original</span>
-              </div>
-              <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                <div style={{width: 20, height: 3, backgroundColor: getAlgorithmColor(method)}}></div>
-                <span style={{color: '#333'}}>{method.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -209,10 +208,9 @@ export default function App(){
             setMethod={setMethod}
             param={param}
             setParam={setParam}
-            showExtrema={showExtrema}
-            setShowExtrema={setShowExtrema}
-            showCpts={showCpts}
-            setShowCpts={setShowCpts}
+            selectedFeature={selectedFeature}
+            setSelectedFeature={setSelectedFeature}
+            paeValue={paeValue}
           />
         </div>
       </div>
