@@ -97,17 +97,14 @@ export default function App(){
     }
     
     // Determine which features to request based on selectedFeature
-    let returnFeatures: string[] = [];
-    if (selectedFeature !== 'none') {
-      // Request all features for complete overlay support
-      // The backend will compute all 12+ features
-      returnFeatures = [
-        'level', 'mean', 'extrema', 'regimes', 'changePoints', 
-        'spikes', 'spikesDips', 'trend', 'noise', 
-        'slope', 'curvature', 'regression', 
-        'periodicity', 'roughness'
-      ];
-    }
+    // Always request all features for complete metrics computation
+    // The backend will compute all 12+ features regardless of overlay selection
+    const returnFeatures = [
+      'level', 'mean', 'extrema', 'regimes', 'changePoints', 
+      'spikes', 'spikesDips', 'trend', 'noise', 
+      'slope', 'curvature', 'regression', 
+      'periodicity', 'roughness'
+    ];
     
     postSmooth({
       seriesId: dataset,
