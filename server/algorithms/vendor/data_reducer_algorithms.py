@@ -262,3 +262,204 @@ def fpcs_downsample(data: list[tuple], rate: int) -> list[tuple]:
         if emitted:
             output.extend(emitted)
     return output
+
+
+# ===========================
+# RANK/ORDER STATISTIC FILTERS (MOVED FROM TRANSFORMERS)
+# ===========================
+
+def median_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a median filter on y values, keeping x unchanged.
+    This is actually a selection/subset operation, not transformation.
+    """
+    import scipy.ndimage as scind
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_med = scind.median_filter(y, size=window_size, mode='nearest')
+    return list(zip(x, y_med))
+
+
+def min_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a min filter on y values, keeping x unchanged.
+    This selects minimum values within sliding windows.
+    """
+    import scipy.ndimage as scind
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_min = scind.minimum_filter(y, size=window_size, mode='nearest')
+    return list(zip(x, y_min))
+
+
+def max_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a max filter on y values, keeping x unchanged.
+    This selects maximum values within sliding windows.
+    """
+    import scipy.ndimage as scind
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_max = scind.maximum_filter(y, size=window_size, mode='nearest')
+    return list(zip(x, y_max))
+
+
+# ===========================
+# WINDOW-BASED SELECTION FILTERS (SUBSET REDUCERS)
+# ===========================
+
+def median_filter_reducer(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Window-based median selection (SUBSET REDUCER).
+    Slides a window across the signal and selects the median value within each window.
+    Unlike traditional median filtering, this selects actual data points from the original signal.
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, find the median of values in that window
+    3. Select the actual data point closest to that median value
+    4. Result contains only original data points (subset)
+    
+    Parameters:
+    - window_size: Size of sliding window (odd numbers work best)
+    
+    Use case: Noise reduction while preserving original data points
+    """
+    if not data or window_size < 1:
+        return data
+    
+    x, y = _xy_from_pairs(data)
+    if window_size >= len(y):
+        return data
+    
+    # Apply median filter and then find closest original points
+    from scipy.ndimage import median_filter
+    y_filtered = median_filter(y, size=window_size, mode='nearest')
+    
+    # For each filtered value, find the closest original value
+    selected_indices = []
+    for i, filtered_val in enumerate(y_filtered):
+        # Find the original point closest to the filtered value
+        distances = np.abs(np.array(y) - filtered_val)
+        closest_idx = np.argmin(distances)
+        selected_indices.append(closest_idx)
+    
+    # Remove duplicates while preserving order
+    unique_indices = []
+    seen = set()
+    for idx in selected_indices:
+        if idx not in seen:
+            unique_indices.append(idx)
+            seen.add(idx)
+    
+    return _pairs_from_indices(x, y, np.array(unique_indices))
+
+
+def min_filter_reducer(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Window-based minimum selection (SUBSET REDUCER).
+    Slides a window across the signal and selects the minimum value within each window.
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, find the minimum value in that window
+    3. Select that actual minimum data point
+    4. Result contains only original data points (subset)
+    
+    Parameters:
+    - window_size: Size of sliding window
+    
+    Use case: Extracting local minima, baseline extraction
+    """
+    if not data or window_size < 1:
+        return data
+        
+    x, y = _xy_from_pairs(data)
+    if window_size >= len(y):
+        return [(x[np.argmin(y)], min(y))]  # Return global minimum
+    
+    selected_indices = []
+    half_window = window_size // 2
+    
+    for i in range(len(y)):
+        # Define window bounds
+        start = max(0, i - half_window)
+        end = min(len(y), i + half_window + 1)
+        
+        # Find minimum in window
+        window_slice = y[start:end]
+        min_idx_in_window = np.argmin(window_slice)
+        actual_idx = start + min_idx_in_window
+        
+        selected_indices.append(actual_idx)
+    
+    # Remove duplicates while preserving order
+    unique_indices = []
+    seen = set()
+    for idx in selected_indices:
+        if idx not in seen:
+            unique_indices.append(idx)
+            seen.add(idx)
+    
+    return _pairs_from_indices(x, y, np.array(unique_indices))
+
+
+def max_filter_reducer(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Window-based maximum selection (SUBSET REDUCER).
+    Slides a window across the signal and selects the maximum value within each window.
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, find the maximum value in that window
+    3. Select that actual maximum data point  
+    4. Result contains only original data points (subset)
+    
+    Parameters:
+    - window_size: Size of sliding window
+    
+    Use case: Extracting local maxima, peak detection
+    """
+    if not data or window_size < 1:
+        return data
+        
+    x, y = _xy_from_pairs(data)
+    if window_size >= len(y):
+        return [(x[np.argmax(y)], max(y))]  # Return global maximum
+    
+    selected_indices = []
+    half_window = window_size // 2
+    
+    for i in range(len(y)):
+        # Define window bounds
+        start = max(0, i - half_window)
+        end = min(len(y), i + half_window + 1)
+        
+        # Find maximum in window
+        window_slice = y[start:end]
+        max_idx_in_window = np.argmax(window_slice)
+        actual_idx = start + max_idx_in_window
+        
+        selected_indices.append(actual_idx)
+    
+    # Remove duplicates while preserving order
+    unique_indices = []
+    seen = set()
+    for idx in selected_indices:
+        if idx not in seen:
+            unique_indices.append(idx)
+            seen.add(idx)
+    
+    return _pairs_from_indices(x, y, np.array(unique_indices))

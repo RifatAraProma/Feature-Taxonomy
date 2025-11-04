@@ -33,42 +33,6 @@ def _ensure_odd_window(window_size: int) -> int:
     return window_size + 1 if window_size % 2 == 0 else window_size
 
 # ===========================
-# RANK FILTERS
-# ===========================
-
-
-
-def median_filter(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a median filter on y values, keeping x unchanged.
-    """
-    x, y = _xy_from_pairs(data)
-    _check_window_size(window_size, len(y))
-    y_med = scind.median_filter(y, size=window_size, mode='nearest')
-    return _pairs(x, y_med)
-
-
-def min_filter(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a min filter on y values, keeping x unchanged.
-    """
-    x, y = _xy_from_pairs(data)
-    _check_window_size(window_size, len(y))
-    y_min = scind.minimum_filter(y, size=window_size, mode='nearest')
-    return _pairs(x, y_min)
-
-
-def max_filter(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a max filter on y values, keeping x unchanged.
-    """
-    x, y = _xy_from_pairs(data)
-    _check_window_size(window_size, len(y))
-    y_max = scind.maximum_filter(y, size=window_size, mode='nearest')
-    return _pairs(x, y_max)
-
-
-# ===========================
 # CONVOLUTIONAL FILTERS
 # ===========================
 

@@ -68,3 +68,6 @@ Thumbs.db
 *.tar
 *.gz
 *.tgz
+
+# --- External libraries ---
+LineSmooth-master/
