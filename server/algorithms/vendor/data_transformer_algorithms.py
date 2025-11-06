@@ -12,17 +12,6 @@ def _xy_from_pairs(data:list[tuple]):
 
 def _pairs(x, y):
     return list(zip(x, y))
-
-"""
-min window_size is 1, which will return the input data
-max window_size is the length of the input data which will do more aggressive filtering
-"""
-def _check_window_size(window_size: int, max_len: int):
-    if window_size < 1:
-        raise ValueError("window_size must be >= 1")
-    if window_size > max_len:
-        raise ValueError(f"window_size must be <= {max_len}")
-    
     
 def _check_cutoff_frequency(cutoff_freq_normalized: float):
     if not (0 < cutoff_freq_normalized <= 1):
@@ -46,22 +35,6 @@ def gaussian_filter(data: list[tuple], sigma: float) -> list[tuple]:
     """
     x, y = _xy_from_pairs(data)
     y_f = scind.gaussian_filter1d(y, sigma=float(sigma), mode='nearest')
-    return _pairs(x, y_f)
-
-
-def mean_filter(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Simple moving average on y with given window_size (samples).
-    min window_size is 1, which will return the input data
-    max window_size is the length of the input data which will do more aggressive filtering
-    """
-    x, y = _xy_from_pairs(data)
-    _check_window_size(window_size, len(y))
-    
-    pad_pre = window_size // 2
-    pad_post = window_size - 1 - pad_pre
-    y_pad = np.pad(y, (pad_pre, pad_post), mode='edge')
-    y_f = np.convolve(y_pad, np.ones((window_size,)) / window_size, mode='valid')
     return _pairs(x, y_f)
 
 
@@ -94,7 +67,7 @@ def fft_cutoff_filter(data: list[tuple], cutoff_freq_normalized: float) -> list[
     cutoff_freq_normalized: normalized cutoff in (0,1], where 1.0 ~ keep all, 0.5 ~ Nyquist/2, etc.
     The Nyquist frequency is a concept from signal processing.
 
-        -If your data is sampled at a rate of Fs samples per second (sampling frequency),
+        -If data is sampled at a rate of Fs samples per second (sampling frequency),
         then the Nyquist frequency = Fs / 2.
 
         - It’s the highest frequency you can represent without aliasing (distortions that happen when higher frequencies “fold” into lower ones).
@@ -222,4 +195,134 @@ def elliptical_filter(data: list [tuple], cutoff_freq_normalized: float, order: 
     _check_cutoff_frequency(cutoff_freq_normalized)
     b, a = scisig.ellip(order, ripple_db, max_atten_db, cutoff_freq_normalized, btype='low')
     y_f = scisig.lfilter(b, a, y)
+    return _pairs(x, y_f)
+
+
+# ===========================
+# WINDOW-BASED FILTER TRANSFORMERS
+# ===========================
+
+def median_filter(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a median filter on y values, keeping x unchanged.
+    Preserves all original data points while smoothing noise.
+    
+    Parameters:
+    - window_size: Size of the median filter window (must be >= 1)
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, compute the median of values in that window
+    3. Replace the center value with the median (smooth noise while preserving edges via 'nearest' mode)
+    4. Result maintains the same number of points as input
+    
+    Use case: Non-linear smoothing that removes spikes while preserving edges
+    """
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_med = scind.median_filter(y, size=window_size, mode='nearest')
+    return _pairs(x, y_med)
+
+
+def min_filter(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a minimum filter on y values, keeping x unchanged.
+    Extracts local minimum values within sliding windows.
+    
+    Parameters:
+    - window_size: Size of the minimum filter window (must be >= 1)
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, find the minimum value in that window
+    3. Replace the center value with the minimum (smoothing via local minima)
+    4. Result maintains the same number of points as input
+    
+    Use case: Finding baseline, removing positive outliers, morphological operations
+    """
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_min = scind.minimum_filter(y, size=window_size, mode='nearest')
+    return _pairs(x, y_min)
+
+
+def max_filter(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Apply a maximum filter on y values, keeping x unchanged.
+    Extracts local maximum values within sliding windows.
+    
+    Parameters:
+    - window_size: Size of the maximum filter window (must be >= 1)
+    
+    How it works:
+    1. Slide a window of size `window_size` across the data
+    2. For each window position, find the maximum value in that window
+    3. Replace the center value with the maximum (smoothing via local maxima)
+    4. Result maintains the same number of points as input
+    
+    Use case: Finding peaks, removing negative outliers, morphological operations
+    """
+    x, y = _xy_from_pairs(data)
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(y):
+        raise ValueError(f"window_size must be <= {len(y)}")
+    
+    y_max = scind.maximum_filter(y, size=window_size, mode='nearest')
+    return _pairs(x, y_max)
+
+
+def mean_filter(data: list[tuple], window_size: int) -> list[tuple]:
+    """
+    Simple moving average (mean) filter on y with given window_size (samples).
+    Preserves all original data points while applying smoothing.
+    
+    How it works:
+    1. Pad the data at edges to preserve output length (mode='edge')
+    2. Slide a window of size `window_size` across the data
+    3. Compute the average (mean) of values in each window
+    4. Result maintains the same number of points as input
+    
+    Parameters:
+    - window_size: Size of the averaging window (samples)
+                   window_size = 1: No smoothing, returns input data unchanged
+                   window_size = 2: Light smoothing
+                   window_size = N: Heavy smoothing (larger N = more blur)
+    
+    Returns:
+        Smoothed data as list of (x, y) tuples with same length as input
+        
+    Example:
+        Input:  [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+        window_size=2: [(0, 1.0), (1, 1.75), (2, 2.5), (3, 3.5), (4, 4.5)]
+        window_size=3: [(0, 1.5), (1, 2.0), (2, 3.0), (3, 4.0), (4, 4.5)]
+    """
+    if not data:
+        return []
+    
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+    if window_size > len(data):
+        raise ValueError(f"window_size must be <= {len(data)}")
+    
+    x, y = _xy_from_pairs(data)
+    
+    # Pad the data at edges
+    pad_pre = window_size // 2
+    pad_post = window_size - 1 - pad_pre
+    y_pad = np.pad(y, (pad_pre, pad_post), mode='edge')
+    
+    # Apply moving average via convolution
+    kernel = np.ones((window_size,)) / window_size
+    y_f = np.convolve(y_pad, kernel, mode='valid')
+    
+    # Return pairs with same length as input
     return _pairs(x, y_f)

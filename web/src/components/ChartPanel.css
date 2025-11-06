@@ -1,0 +1,15 @@
+/* Position Vega-Lite actions menu to top-right corner outside the chart */
+.chart-container {
+  position: relative;
+  width: 1000px;
+  height: 375px;
+  max-width: 1000px;
+  max-height: 375px;
+}
+
+.chart-container :global(.vega-actions) {
+  position: absolute !important;
+  top: -30px !important;
+  right: 0 !important;
+  z-index: 10 !important;
+}

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import embed from 'vega-embed'
 import { lineBase } from '../vega/lineBase'
+import { getAlgorithmColor } from '../constants/algorithmColors'
+import './ChartPanel.css'
 import { 
   overlayExtrema, 
   overlayChangePoints, 
@@ -27,36 +29,6 @@ type Props = {
   selectedFeature: string
 }
 
-// Algorithm color mapping - cohesive palette with distinct categories
-const getAlgorithmColor = (method: string): string => {
-  const colorMap: Record<string, string> = {
-    // Transformers - Cool blues and teals
-    'gaussian_filter': '#1E88E5',        // Vivid Blue
-    'median_filter': '#039BE5',          // Light Blue
-    'mean_filter': '#00ACC1',            // Cyan
-    'moving_average': '#00897B',         // Teal
-    'savitzky_golay_filter': '#43A047',  // Green
-    'butterworth_filter': '#7CB342',     // Light Green
-    'fft_cutoff_filter': '#C0CA33',      // Lime
-    'chebyshev_filter': '#FDD835',       // Yellow
-    
-    // Reducers - Warm oranges and reds
-    'lttb_downsample': '#FB8C00',        // Orange
-    'm4_downsample': '#F4511E',          // Deep Orange
-    'rdp_downsample': '#E53935',         // Red
-    'minmaxlttb_downsample': '#D81B60',  // Pink
-    'uniform_subsample_downsample': '#8E24AA', // Purple
-    'fpcs_downsample': '#5E35B1',        // Deep Purple
-    'tda_downsample': '#3949AB',         // Indigo
-    
-    // Aggregators - Browns and earth tones
-    'asap_aggregator': '#6D4C41',        // Brown
-    'bin_average_aggregator': '#8D6E63', // Light Brown
-  };
-  
-  return colorMap[method] || '#9E9E9E'; // Default to Gray if not found
-};
-
 export default function ChartPanel({orig, smooth, overlays, aspect, method, selectedFeature}: Props){
   const ref = useRef<HTMLDivElement>(null)
   
@@ -66,9 +38,9 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
     console.log('ChartPanel overlays:', overlays);
     console.log('ChartPanel selectedFeature:', selectedFeature);
     
-    // Get container dimensions - simple fixed size approach
-    const W = 800;  // Fixed width that fits well in the layout
-    const H = 450;  // Fixed height for consistent display
+    // Use LineSmooth dimensions for consistency across all charts
+    const W = 1000;  // LineSmooth width: 1000px
+    const H = 375;   // LineSmooth height: 375px
     
     const base = lineBase(W, H)
     
@@ -307,8 +279,15 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
       datasetKeys: Object.keys(datasets)
     });
     
-    embed(ref.current, spec, {actions:false})
+    embed(ref.current, spec, {
+      actions: {
+        export: true,
+        source: true,
+        compiled: false,
+        editor: true
+      }
+    })
   }, [orig, smooth, overlays, method, selectedFeature])
   
-  return <div ref={ref} style={{width: '100%', maxWidth: '900px'}} />
+  return <div className="chart-container"><div ref={ref} /></div>
 }

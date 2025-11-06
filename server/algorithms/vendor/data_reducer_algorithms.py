@@ -144,7 +144,7 @@ def lttb_downsample(data: list[tuple], output_length: int) -> list[tuple] :
     return _pairs_from_indices(x, y, np.array(downsampled_indices))
 
 
-def uniform_subsample_downsample(data: list[tuple], output_length: int) -> list[tuple]:
+def uniform_subsample(data: list[tuple], output_length: int) -> list[tuple]:
     """
     Uniformly select `output_length` points (including endpoints) from (x,y).
     Returns a reduced list of (x,y) pairs.
@@ -266,57 +266,7 @@ def fpcs_downsample(data: list[tuple], rate: int) -> list[tuple]:
 
 # ===========================
 # RANK/ORDER STATISTIC FILTERS (MOVED FROM TRANSFORMERS)
-# ===========================
-
-def median_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a median filter on y values, keeping x unchanged.
-    This is actually a selection/subset operation, not transformation.
-    """
-    import scipy.ndimage as scind
-    x, y = _xy_from_pairs(data)
-    if window_size < 1:
-        raise ValueError("window_size must be >= 1")
-    if window_size > len(y):
-        raise ValueError(f"window_size must be <= {len(y)}")
-    
-    y_med = scind.median_filter(y, size=window_size, mode='nearest')
-    return list(zip(x, y_med))
-
-
-def min_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a min filter on y values, keeping x unchanged.
-    This selects minimum values within sliding windows.
-    """
-    import scipy.ndimage as scind
-    x, y = _xy_from_pairs(data)
-    if window_size < 1:
-        raise ValueError("window_size must be >= 1")
-    if window_size > len(y):
-        raise ValueError(f"window_size must be <= {len(y)}")
-    
-    y_min = scind.minimum_filter(y, size=window_size, mode='nearest')
-    return list(zip(x, y_min))
-
-
-def max_filter_downsample(data: list[tuple], window_size: int) -> list[tuple]:
-    """
-    Apply a max filter on y values, keeping x unchanged.
-    This selects maximum values within sliding windows.
-    """
-    import scipy.ndimage as scind
-    x, y = _xy_from_pairs(data)
-    if window_size < 1:
-        raise ValueError("window_size must be >= 1")
-    if window_size > len(y):
-        raise ValueError(f"window_size must be <= {len(y)}")
-    
-    y_max = scind.maximum_filter(y, size=window_size, mode='nearest')
-    return list(zip(x, y_max))
-
-
-# ===========================
+# ===========================# ===========================
 # WINDOW-BASED SELECTION FILTERS (SUBSET REDUCERS)
 # ===========================
 
@@ -463,3 +413,4 @@ def max_filter_reducer(data: list[tuple], window_size: int) -> list[tuple]:
             seen.add(idx)
     
     return _pairs_from_indices(x, y, np.array(unique_indices))
+

@@ -24,11 +24,3 @@ def apply(method: str, y, **params):
             if isinstance(result_pairs[0], tuple):
                 return [float(pair[1]) for pair in result_pairs]
         return np.asarray(result_pairs).tolist()
-    
-    # fallbacks
-    if method == "moving_average":
-        w = int(params.get("w", 5))
-        if w < 1: return y_arr.tolist()
-        kern = np.ones(w)/w
-        return np.convolve(y_arr, kern, mode="same").tolist()
-    raise ValueError(f"Unknown transformer method: {method}")

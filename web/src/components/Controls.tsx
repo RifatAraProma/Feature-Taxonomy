@@ -1,33 +1,38 @@
 import React from 'react'
+import { getAlgorithmColor } from '../constants/algorithmColors'
 
 type Props = {
   dataset: string, setDataset: (v:string)=>void,
   method: string, setMethod: (v:string)=>void,
   param: number, setParam: (v:number)=>void,
   selectedFeature: string, setSelectedFeature: (v:string)=>void,
-  paeValue: number | null
+  paeValue: number | null,
+  precomputedInfo?: any,
+  origLength?: number,
+  smoothLength?: number,
+  algorithmColor?: string
 }
 
-export default function Controls(p: Props){
+export default function Controls(p: Props) {
   // Get parameter label and description based on method
   const getParamInfo = () => {
-    if (p.method.includes('filter') && !p.method.includes('fft') && !p.method.includes('butterworth') && !p.method.includes('chebyshev')) {
+    if (p.method.includes('filter') && !p.method.includes('fft') && !p.method.includes('butterworth') && !p.method.includes('chebyshev') && !p.method.includes('elliptical')) {
       if (p.method === 'gaussian_filter') {
         return {
           label: 'Simplification Level',
-          description: 'Higher values = more smoothing (larger sigma)'
+          description: 'Higher values = more simplification (larger sigma)'
         };
       }
       return {
         label: 'Simplification Level',
-        description: 'Higher values = more smoothing (larger window)'
+        description: 'Higher values = more simplification (larger window)'
       };
-    } else if (p.method.includes('butterworth') || p.method.includes('fft') || p.method.includes('chebyshev')) {
+    } else if (p.method.includes('butterworth') || p.method.includes('fft') || p.method.includes('chebyshev') || p.method.includes('elliptical')) {
       return {
         label: 'Simplification Level',
         description: 'Higher values = more low-pass filtering (lower cutoff frequency)'
       };
-    } else if (p.method.includes('downsample')) {
+    } else if (p.method.includes('downsample') || p.method.includes('reducer')) {
       return {
         label: 'Simplification Level',
         description: 'Higher values = more reduction (fewer output points)'
@@ -80,26 +85,31 @@ export default function Controls(p: Props){
             cursor: 'pointer'
           }}
         >
-          <optgroup label="🔄 Transformers (Smoothers)">
+          <optgroup label="Transformers (Full Length Output)">
             <option value="gaussian_filter">Gaussian Filter</option>
-            <option value="median_filter">Median Filter</option>
             <option value="mean_filter">Mean Filter</option>
-            <option value="moving_average">Moving Average</option>
-            <option value="savitzky_golay_filter">Savitzky-Golay</option>
+            <option value="median_filter">Median Filter</option>
+            <option value="min_filter">Min Filter</option>
+            <option value="max_filter">Max Filter</option>
+            <option value="savitzky_golay_filter">Savitzky-Golay Filter</option>
             <option value="butterworth_filter">Butterworth Filter</option>
-            <option value="fft_cutoff_filter">FFT Cutoff Filter</option>
             <option value="chebyshev_filter">Chebyshev Filter</option>
+            <option value="elliptical_filter">Elliptical (Cauer) Filter</option>
+            <option value="fft_cutoff_filter">FFT Cutoff Filter</option>
           </optgroup>
-          <optgroup label="📉 Reducers (Downsamplers)">
+          <optgroup label="Reducers (Downsamplers)">
             <option value="lttb_downsample">LTTB Downsample</option>
             <option value="m4_downsample">M4 Downsample</option>
-            <option value="rdp_downsample">RDP (Douglas-Peucker)</option>
             <option value="minmaxlttb_downsample">MinMax LTTB</option>
-            <option value="uniform_subsample_downsample">Uniform Subsample</option>
+            <option value="rdp_downsample">RDP (Douglas-Peucker)</option>
+            <option value="uniform_subsample">Uniform Subsample</option>
             <option value="fpcs_downsample">FPCS Downsample</option>
             <option value="tda_downsample">TDA Downsample</option>
+            <option value="median_filter_reducer">Median Filter Reducer</option>
+            <option value="min_filter_reducer">Min Filter Reducer</option>
+            <option value="max_filter_reducer">Max Filter Reducer</option>
           </optgroup>
-          <optgroup label="📊 Aggregators">
+          <optgroup label="Aggregators">
             <option value="asap_aggregator">ASAP Aggregator</option>
             <option value="bin_average_aggregator">Bin Average</option>
           </optgroup>
@@ -187,6 +197,120 @@ export default function Controls(p: Props){
           </div>
         )}
         
+        {/* Data Point Count Display */}
+        {p.origLength !== undefined && p.smoothLength !== undefined && (
+          <div style={{
+            padding: 12,
+            backgroundColor: '#F0F4FF',
+            border: '2px solid #6C8FFF',
+            borderRadius: 6
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#3F51B5',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: 8
+            }}>
+              Data Point Compression
+            </div>
+            
+            {/* Get algorithm-specific color */}
+            {(() => {
+              const algoColor = getAlgorithmColor(p.method);
+              console.log('Algorithm Color for', p.method, 'is', algoColor);
+              const isReducer = p.smoothLength < p.origLength;
+              
+              return (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  gap: 8
+                }}>
+                  {/* Original Points - Dark Gray (neutral) */}
+                  <div style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    padding: 10,
+                    backgroundColor: '#F5F5F5',
+                    border: '2px solid #424242',
+                    borderRadius: 6
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      color: '#424242',
+                      fontWeight: 600,
+                      marginBottom: 4
+                    }}>
+                      ORIGINAL
+                    </div>
+                    <div style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: '#212121'
+                    }}>
+                      {p.origLength}
+                    </div>
+                  </div>
+                  
+                  {/* Arrow / Reduction */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    color: '#6C8FFF',
+                    fontWeight: 700
+                  }}>
+                    →
+                  </div>
+                  
+                  {/* Output Points - Algorithm-specific color */}
+                  <div style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    padding: 10,
+                    backgroundColor: algoColor + '22',  // 22 = 13% opacity
+                    border: `2px solid ${algoColor}`,
+                    borderRadius: 6
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      color: algoColor,
+                      fontWeight: 600,
+                      marginBottom: 4
+                    }}>
+                      {isReducer ? 'REDUCED' : 'TRANSFORMED'}
+                    </div>
+                    <div style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: algoColor
+                    }}>
+                      {p.smoothLength}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Compression Ratio */}
+            <div style={{
+              marginTop: 10,
+              fontSize: 12,
+              color: getAlgorithmColor(p.method),
+              textAlign: 'center',
+              fontWeight: 600
+            }}>
+              {p.smoothLength < p.origLength 
+                ? `📉 Reduced by ${Math.round(((p.origLength - p.smoothLength) / p.origLength) * 100)}%`
+                : `✓ Full Resolution (Transformer)`
+              }
+            </div>
+          </div>
+        )}
+        
         {/* Slider */}
         <div style={{
           display: 'flex',
@@ -207,7 +331,7 @@ export default function Controls(p: Props){
           <input 
             type="range" 
             min={0} 
-            max={100} 
+            max={p.precomputedInfo?.available ? (p.precomputedInfo.numLevels - 1) : 100} 
             step={1}
             value={p.param} 
             onChange={e=>p.setParam(parseInt(e.target.value))}
