@@ -9,7 +9,7 @@ import { getAlgorithmColor } from './constants/algorithmColors'
 export default function App(){
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
-  const [param, setParam] = useState(0)  // Now 0-100 simplification level
+  const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
   const [precomputedInfo, setPrecomputedInfo] = useState<any>(null)
   const [precomputedCache, setPrecomputedCache] = useState<any>(null) // Cache all levels
   const [orig, setOrig] = useState<{t:number,y:number}[]>([])
@@ -43,6 +43,8 @@ export default function App(){
         }
         
         console.log(`[PRECOMPUTED] ✓ Loaded ${data.numLevels} levels`);
+        console.log(`[PRECOMPUTED] Backend paramName:`, data.paramName);
+        console.log(`[PRECOMPUTED] First level data:`, data.allOutputs[0]);
         
         // Convert all outputs to cache format for instant access
         const allLevels: any = {};
@@ -56,25 +58,42 @@ export default function App(){
               banking: {aspect: 1.0, heightPx: 0},
               features: {original: {}, simplified: {}},
               metrics: {},
-              pae: levelData.pae
+              pae: levelData.pae,
+              paramName: data.paramName,
+              paramValue: levelData.paramValue
             };
           }
         }
         
         setPrecomputedCache({ allLevels });
+        
+        // Use current param value, or default to 0 if param is out of range
+        const initialLevel = (param >= 0 && param < data.numLevels) ? param : 0;
+        
+        const paramInfo = allLevels[initialLevel] ? {
+          name: allLevels[initialLevel].paramName,
+          value: allLevels[initialLevel].paramValue
+        } : null;
+        
+        console.log(`[PRECOMPUTED] Setting parameterInfo for level ${initialLevel}:`, paramInfo);
+        
         setPrecomputedInfo({
           available: true,
-          numLevels: data.numLevels
+          numLevels: data.numLevels,
+          parameterInfo: paramInfo
         });
         console.log(`[PRECOMPUTED] ✓ Cache populated with ${data.numLevels} levels for instant slider`);
         
-        // Set PAE for level 0 immediately so it's visible right away
-        if (allLevels[0]) {
-          setPaeValue(allLevels[0].pae || null);
+        // Set PAE for current level immediately so it's visible right away
+        if (allLevels[initialLevel]) {
+          setPaeValue(allLevels[initialLevel].pae || null);
         }
         
-        if (param >= data.numLevels) {
-          setParam(data.numLevels - 1);
+        if (param > data.numLevels) {
+          setParam(data.numLevels);
+        }
+        if (param < 0) {
+          setParam(0);
         }
       })
       .catch(err => {
@@ -95,6 +114,15 @@ export default function App(){
       setMetrics(cached.metrics);
       setOverlays(cached.features || {});
       setPaeValue(cached.pae || null);
+      
+      // Update parameter info for current level
+      setPrecomputedInfo(prev => ({
+        ...prev,
+        parameterInfo: {
+          name: cached.paramName,
+          value: cached.paramValue
+        }
+      }));
       return;
     }
     

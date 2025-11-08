@@ -1,46 +1,30 @@
-import numpy as np
+from pae import PAEMeasure
 import pandas as pd
-from pae import PAEMeasure, Scaler
+import numpy as np
+from pae import Scaler
 
+def get_pae(data, width=1000, height=375, r=None):
+    if not isinstance(data, (list, tuple)) or len(data) == 0:
+        # print("PAE Input Data:", data)
+        raise ValueError("Invalid input: Expected non-empty list or tuple.")
 
-def pixel_approx_entropy(data, width=128, height=128, r=None):
-    """
-    Calculate Pixel Approximate Entropy (PAE) for a time series.
-    
-    This implementation is based on the paper "Approximate entropy as a measure of system complexity"
-    and uses a proper 2D pixel-based embedding approach.
-    
-    Args:
-        data: Time series as list, tuple, or array
-        width: Width of the 2D pixel grid (default: 128)
-        height: Height of the 2D pixel grid (default: 128)
-        r: Tolerance for pattern matching. If None, defaults to 0.2 * std(data_scaled)
-           Range 0.1-0.2 * SD is recommended by the paper; we use 0.2 for higher tolerance.
-    
-    Returns:
-        float: PAE value rounded to 3 decimal places
-        
-    Reference:
-        "Approximate entropy as a measure of system complexity" 
-        Uses Chebyshev distance with tolerance-based pattern matching
-    """
-    if not isinstance(data, (list, tuple, np.ndarray)) or len(data) == 0:
-        raise ValueError("Invalid input: Expected non-empty list, tuple, or array.")
-    
-    # Scale the data to fit the pixel grid
-    scaler = Scaler(int(width), int(height))
-    data_scaled = scaler.scale(data)
-    
-    # Set tolerance r based on input or default behavior
+    if len(data) == 0:
+        return 0
+
+    # Scale the data
+    scale = Scaler(int(width), int(height))
+    data_scaled = scale.scale(data)
+    # # print("Rescaled Data:", data_scaled)  # Debugging: # print rescaled data
+
+    # Set r based on input or default behavior
     if r is None:
-        # Default: 0.2 * std as recommended by the paper
-        # Range 0.1-0.2 SD is good choice; we chose 0.2 for higher tolerance
-        r = 0.2 * np.std(data_scaled)
+        r = 0.2 * np.std(data_scaled)   # Adjusted default behavior # cite from paper titled Approximate entropy as a measure of system complexity. 
+                                        #btn 0.1 to 0.2 sd is good choice. we chose 0.2 for a higher tolerance
     else:
         r = float(r)  # Ensure r is a float
-    
-    # Calculate PAE using the proper pixel-based measure
-    pae_measure = PAEMeasure(w=int(width), h=int(height), r=r)
-    pae_value = pae_measure.pae(data)
-    
-    return round(float(pae_value), 3)
+
+    # Calculate PAE
+    pae_meas = PAEMeasure(w=int(width), h=int(height), r=r)
+    pae_value = pae_meas.pae(data)
+
+    return round(pae_value, 3)

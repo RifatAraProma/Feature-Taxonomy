@@ -13,42 +13,73 @@ TEST_DATASET_CATEGORY = "stock_price"
 TEST_DATASET = "stock_aapl_price"
 
 ALGORITHMS_CONFIG = {
-    'fft_cutoff_filter': {
-        'param_name': 'cutoff_freq',
-        'param_bounds': None,  # Will be set dynamically: (2, data_length)
+    # 'fft_cutoff_filter': {
+    #     'param_name': 'cutoff_freq',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length)
+    #     'param_type': 'int',
+    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
+    #     'param_direction': 'inverse',  # Higher cutoff_freq = Less smoothing = Higher PAE
+    # },
+    # 'gaussian_filter': {
+    #     'param_name': 'sigma',
+    #     'param_bounds': None,  # Will be set dynamically based on data length
+    #     'param_type': 'float',
+    #     'param_direction': 'direct',  # Higher sigma = More smoothing = Lower PAE
+    # },
+    # 'butterworth_filter': {
+    #     'param_name': 'cutoff_freq_normalized',
+    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+    #     'param_type': 'float',
+    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
+    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+    #     'extra_params': {'order': 2},  # Fixed order parameter
+    # },
+    # 'chebyshev_filter': {
+    #     'param_name': 'cutoff_freq_normalized',
+    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+    #     'param_type': 'float',
+    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
+    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+    #     'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed order and ripple
+    # },
+    # 'elliptical_filter': {
+    #     'param_name': 'cutoff_freq_normalized',
+    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+    #     'param_type': 'float',
+    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
+    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+    #     'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params
+    # },
+    'mean_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
         'param_type': 'int',
-        'use_linesmooth_mapping': True,  # Use logarithmic scaling for linear PAE
-        'param_direction': 'inverse',  # Higher cutoff_freq = Less smoothing = Higher PAE
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
     },
-    'gaussian_filter': {
-        'param_name': 'sigma',
-        'param_bounds': None,  # Will be set dynamically based on data length
-        'param_type': 'float',
-        'param_direction': 'direct',  # Higher sigma = More smoothing = Lower PAE
+    'median_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
     },
-    'butterworth_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-        'param_type': 'float',
-        'use_linesmooth_mapping': True,  # Use logarithmic scaling for linear PAE
-        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-        'extra_params': {'order': 2},  # Fixed order parameter
+    'min_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
     },
-    'chebyshev_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-        'param_type': 'float',
-        'use_linesmooth_mapping': True,  # Use logarithmic scaling for linear PAE
-        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-        'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed order and ripple
+    'max_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
     },
-    'elliptical_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-        'param_type': 'float',
-        'use_linesmooth_mapping': True,  # Use logarithmic scaling for linear PAE
-        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-        'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params
+    'savitzky_golay_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'extra_params': {'polyorder': 2},  # Fixed polynomial order
     },
 }
 
@@ -110,6 +141,17 @@ def generate_levels(algo_name, y_data):
             param_min = 2
             param_max = len(y_data)
             print(f"FFT cutoff filter: cutoff_freq range = [{param_min}, {param_max}]")
+        elif algo_name in ['mean_filter', 'median_filter', 'min_filter', 'max_filter']:
+            # Window-based filters: window_size from 2 to data_length/4
+            param_min = 2
+            param_max = max(5, len(y_data) // 4)
+            print(f"{algo_name}: window_size range = [{param_min}, {param_max}]")
+        elif algo_name == 'savitzky_golay_filter':
+            # Savitzky-Golay: window_size must be odd and > polyorder
+            # Start from 3 (minimum for polyorder=2) to data_length/4
+            param_min = 3
+            param_max = max(7, len(y_data) // 4)
+            print(f"{algo_name}: window_size range = [{param_min}, {param_max}]")
     else:
         param_min, param_max = param_bounds
         print(f"{algo_name}: {param_name} range = [{param_min}, {param_max}]")
@@ -117,7 +159,7 @@ def generate_levels(algo_name, y_data):
     # Generate parameter values for levels 1-100 (100 levels)
     num_transform_levels = NUM_LEVELS - 1  # Exclude level 0
     
-    if config.get('use_linesmooth_mapping', False):
+    if config.get('use_logscale', False):
         # LineSmooth approach: logarithmic scaling for linear PAE relationship
         import math
         param_values = []
@@ -167,6 +209,27 @@ def generate_levels(algo_name, y_data):
                 param_values = np.linspace(param_max, param_min, num_transform_levels)
             else:
                 param_values = np.linspace(param_max, param_min, num_transform_levels, dtype=int)
+    
+    # Special handling for savitzky_golay_filter: ensure window_size is odd
+    if algo_name == 'savitzky_golay_filter':
+        polyorder = config.get('extra_params', {}).get('polyorder', 2)
+        # Ensure all window sizes are odd and > polyorder
+        param_values_fixed = []
+        for p in param_values:
+            p_int = int(p)
+            # Make odd if even
+            if p_int % 2 == 0:
+                p_int += 1
+            # Ensure > polyorder
+            if p_int <= polyorder:
+                p_int = polyorder + 1
+                # Make odd if needed
+                if p_int % 2 == 0:
+                    p_int += 1
+            param_values_fixed.append(p_int)
+        param_values = np.array(param_values_fixed)
+        print(f"  Adjusted window_size values to be odd and > polyorder={polyorder}")
+        print(f"  First few values: {param_values[:5]}, Last few: {param_values[-5:]}")
     
     # Generate precomputed files and collect data for plotting
     levels_data = []
