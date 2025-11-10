@@ -12,6 +12,26 @@ from .precomputed_loader import get_precomputed_output, has_precomputed, get_alg
 import numpy as np
 from pathlib import Path
 
+def extract_y_values(data):
+    """
+    Extract y-values from data that might be tuples (from reducers) or simple values (from transformers).
+    
+    Args:
+        data: Either a list of y-values or a list of (x, y) tuples
+        
+    Returns:
+        List of y-values
+    """
+    if not data or len(data) == 0:
+        return data
+    
+    # Check if this is a list of (x, y) tuples (from reducers)
+    if isinstance(data[0], (list, tuple)) and len(data[0]) == 2:
+        return [float(pair[1]) for pair in data]
+    
+    # Already simple y-values (from transformers)
+    return data
+
 app = Flask(__name__)
 
 @app.route("/datasets", methods=["GET"])
@@ -505,19 +525,25 @@ def smooth():
                 actual_params = compute_default_params(method, y)
         yhat = run_method(method, actual_params, y)
 
-    aspect = median_slope_aspect(yhat if banking_flag else y)
+    # Extract y-values from tuples if needed (for reducers)
+    yhat_values = extract_y_values(yhat)
+    
+    aspect = median_slope_aspect(yhat_values if banking_flag else y)
     # Use precomputed PAE if available, otherwise compute it
-    pae_val = precomputed_pae if precomputed_pae is not None else pae(yhat)
+    pae_val = precomputed_pae if precomputed_pae is not None else pae(yhat_values)
     
     # Skip heavy computation for precomputed data (focus on speed)
     if use_precomputed and has_precomputed(sid, method):
         # Return minimal response for precomputed data
         precomputed_info = get_algorithm_info(sid, method)
+        xy_data = to_xy(yhat)
+        print(f"DEBUG: Returning precomputed data for {method}, yhat type={type(yhat)}, first element={yhat[0] if yhat else None}")
+        print(f"DEBUG: xy_data length={len(xy_data)}, first element={xy_data[0] if xy_data else None}")
         return jsonify({
             "seriesId": s.get("id", sid),
             "method": method,
             "params": actual_params,
-            "yhat": to_xy(yhat),
+            "yhat": xy_data,
             "pae": None,  # Skip PAE
             "banking": {"aspect": 1.0, "heightPx": 0},  # Skip banking
             "features": {'original': {}, 'simplified': {}},  # Skip features
@@ -530,7 +556,7 @@ def smooth():
     # ALWAYS compute all features for both original and simplified (needed for metrics)
     cfg = FeatureConfig()
     orig_features = compute_all_features(y, cfg)
-    simp_features = compute_all_features(yhat, cfg)
+    simp_features = compute_all_features(yhat_values, cfg)
     
     # Extract requested features for overlay visualization
     # Return features for BOTH original and simplified series
@@ -567,7 +593,7 @@ def smooth():
                     feats['simplified'][mapping] = simp_features[mapping]
     
     # Compute metrics including feature preservation
-    metrics = compute_metrics(y, yhat, orig_features, simp_features)
+    metrics = compute_metrics(y, yhat_values, orig_features, simp_features)
     
     # Get precomputed metadata if available
     precomputed_info = None

@@ -2,7 +2,7 @@ import json
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from server.algorithms import transformers
+from server.algorithms import transformers, reducers, aggregators
 from server.features.pae import get_pae
 
 
@@ -50,37 +50,120 @@ ALGORITHMS_CONFIG = {
     #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
     #     'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params
     # },
-    'mean_filter': {
-        'param_name': 'window_size',
-        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+    # 'mean_filter': {
+    #     'param_name': 'window_size',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
+    # },
+    # 'median_filter': {
+    #     'param_name': 'window_size',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
+    # },
+    # 'min_filter': {
+    #     'param_name': 'window_size',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
+    # },
+    # 'max_filter': {
+    #     'param_name': 'window_size',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
+    # },
+    # 'savitzky_golay_filter': {
+    #     'param_name': 'window_size',
+    #     'param_bounds': None,  # Will be set dynamically: (3, data_length // 4)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
+    #     'extra_params': {'polyorder': 2},  # Fixed polynomial order
+    # },
+    
+    # REDUCER ALGORITHMS - Fixed-Count Downsamplers
+    # 'lttb_downsample': {
+    #     'param_name': 'output_length',
+    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': True,  # Use logarithmic scaling for output_length
+    # },
+    # 'minmaxlttb_downsample': {
+    #     'param_name': 'output_length',
+    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': True,  # Use logarithmic scaling for output_length
+    # },
+    'm4_downsample': {
+        'param_name': 'output_length',
+        'param_bounds': None,  # Will be set dynamically: (8, data_length - 1), must be multiple of 4
         'param_type': 'int',
-        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'requires_multiple_of': 4,  # M4 requires output_length to be multiple of 4
+        'minimum_value': 8,  # M4 minimum is 8 (uses n_out/4 bins, Rust requires nb_bins >= 2)
+        'use_logscale': True,  # Use logarithmic scaling for output_length
     },
-    'median_filter': {
-        'param_name': 'window_size',
-        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-        'param_type': 'int',
-        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    },
-    'min_filter': {
-        'param_name': 'window_size',
-        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-        'param_type': 'int',
-        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    },
-    'max_filter': {
-        'param_name': 'window_size',
-        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-        'param_type': 'int',
-        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    },
-    'savitzky_golay_filter': {
-        'param_name': 'window_size',
-        'param_bounds': None,  # Will be set dynamically: (3, data_length // 4)
-        'param_type': 'int',
-        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-        'extra_params': {'polyorder': 2},  # Fixed polynomial order
-    },
+    # 'uniform_subsample': {
+    #     'param_name': 'output_length',
+    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': True,  # Use logarithmic scaling for output_length
+    # },
+    # 'rdp_downsample': {
+    #     'param_name': 'output_length',
+    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': True,  # Use logarithmic scaling for output_length
+    # },
+    # 'fpcs_downsample': {
+    #     'param_name': 'rate',
+    #     'param_bounds': None,  # Will be set dynamically: (1, data_length // 3)
+    #     'param_type': 'int',
+    #     'param_direction': 'direct',  # Higher rate = More reduction = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': False,  # Linear sampling: rate has direct relationship with window size
+    # },
+    # 'tda_downsample': {
+    #     'param_name': 'filter_level',
+    #     'param_bounds': (0.0, 1.0),  # Persistence threshold for TDA downsampling
+    #     'param_type': 'float',
+    #     'param_direction': 'direct',  # Higher filter_level = Higher threshold = More downsampling = Lower PAE
+    #     'algorithm_type': 'reducer',
+    #     'use_logscale': True,  # Linear sampling: threshold directly controls persistence filtering
+    # },
+    
+    # AGGREGATOR ALGORITHMS - Time Series Aggregation
+    # 'asap_aggregator': {
+    #     'param_name': 'resolution',
+    #     'param_bounds': (2, None),  # Will be set dynamically: (3, data_length // 2)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # INVERSE: Higher resolution = Less aggregation = Higher PAE
+    #     'algorithm_type': 'aggregator',
+    #     'use_logscale': True,  # Exponential spacing for smooth progression
+    # },
+    # 'bin_average_aggregator': {
+    #     'param_name': 'bins',
+    #     'param_bounds': None,  # Will be set dynamically: (2, data_length)
+    #     'param_type': 'int',
+    #     'param_direction': 'inverse',  # Higher bins = Less aggregation = Higher PAE
+    #     'algorithm_type': 'aggregator',
+    #     'use_logscale': True,  # Use logarithmic spacing for bins
+    # },
 }
 
 
@@ -130,9 +213,18 @@ def generate_levels(algo_name, y_data):
     # Set parameter bounds
     param_name = config['param_name']
     param_bounds = config.get('param_bounds')
+    algo_type = config.get('algorithm_type', 'transformer')
     
-    if param_bounds is None:
+    # Check if we need to set dynamic bounds
+    # param_bounds could be None, or a tuple with None as max (e.g., (10, None))
+    if param_bounds is None or (isinstance(param_bounds, tuple) and param_bounds[1] is None):
         # Dynamic bounds based on algorithm
+        if param_bounds is not None and isinstance(param_bounds, tuple):
+            # Use the specified min from config
+            param_min = param_bounds[0]
+        else:
+            param_min = None  # Will be set below
+            
         if algo_name == 'gaussian_filter':
             param_min = 1.0
             param_max = len(y_data) / 10.0
@@ -152,6 +244,40 @@ def generate_levels(algo_name, y_data):
             param_min = 3
             param_max = max(7, len(y_data) // 4)
             print(f"{algo_name}: window_size range = [{param_min}, {param_max}]")
+        elif algo_name in ['lttb_downsample', 'minmaxlttb_downsample', 'uniform_subsample', 'rdp_downsample']:
+            # Fixed-count downsamplers: output_length from 3 to data_length - 1
+            param_min = 3
+            param_max = len(y_data) - 1
+            print(f"{algo_name}: output_length range = [{param_min}, {param_max}]")
+        elif algo_name == 'fpcs_downsample':
+            # FPCS: rate from 1 (most points) to a value that ensures complete coverage
+            # To ensure all points are processed, we need at least 2 complete windows.
+            # With rate R and N points, we get floor(N/R) complete windows.
+            # To guarantee the last points are included, use R such that 2*R >= N, so R <= N/2.
+            # But to be safer and ensure the last window has enough points to be meaningful,
+            # we'll cap at N/3 to ensure at least 3 windows cover all data.
+            param_min = 1
+            param_max = max(3, len(y_data) // 3)  # Ensure at least 3 windows
+            print(f"{algo_name}: rate range = [{param_min}, {param_max}] (ensures full coverage)")
+        elif algo_name == 'm4_downsample':
+            # M4: minimum 8, must be multiple of 4
+            param_min = config.get('minimum_value', 8)
+            param_max = len(y_data) - 1
+            print(f"{algo_name}: output_length range = [{param_min}, {param_max}] (multiples of 4)")
+        elif algo_name == 'bin_average_aggregator':
+            # Bin average: bins from 10 to data_length
+            param_min = 2
+            param_max = len(y_data)
+            print(f"{algo_name}: bins range = [{param_min}, {param_max}]")
+        elif algo_name == 'asap_aggregator':
+            # ASAP: resolution from 10 to data_length // 2
+            # ASAP only aggregates if len(data) >= 2 * resolution
+            # So max useful resolution is data_length // 2
+            # Lower resolution = more aggregation = fewer points
+            if param_min is None:
+                param_min = 10  # Fallback if not set in config
+            param_max = len(y_data) // 2  # Max that triggers aggregation
+            print(f"{algo_name}: resolution range = [{param_min}, {param_max}] (threshold: len >= 2*resolution)")
     else:
         param_min, param_max = param_bounds
         print(f"{algo_name}: {param_name} range = [{param_min}, {param_max}]")
@@ -194,7 +320,7 @@ def generate_levels(algo_name, y_data):
             param_values.append(param_val)
         param_values = np.array(param_values)
     else:
-        # Linear mapping (for algorithms without LineSmooth)
+        # Linear mapping
         param_direction = config.get('param_direction', 'inverse')
         
         if param_direction == 'direct':
@@ -231,6 +357,27 @@ def generate_levels(algo_name, y_data):
         print(f"  Adjusted window_size values to be odd and > polyorder={polyorder}")
         print(f"  First few values: {param_values[:5]}, Last few: {param_values[-5:]}")
     
+    # Special handling for m4_downsample: ensure output_length is multiple of 4
+    if algo_name == 'm4_downsample':
+        multiple_of = config.get('requires_multiple_of', 4)
+        minimum_val = config.get('minimum_value', 8)
+        # Ensure all values are multiples of 4 and >= minimum
+        param_values_fixed = []
+        for p in param_values:
+            p_int = int(p)
+            # Ensure >= minimum
+            if p_int < minimum_val:
+                p_int = minimum_val
+            # Round to nearest multiple of 4
+            p_int = (p_int // multiple_of) * multiple_of
+            # Ensure still >= minimum after rounding
+            if p_int < minimum_val:
+                p_int = minimum_val
+            param_values_fixed.append(p_int)
+        param_values = np.array(param_values_fixed)
+        print(f"  Adjusted output_length values to be multiples of {multiple_of} and >= {minimum_val}")
+        print(f"  First few values: {param_values[:5]}, Last few: {param_values[-5:]}")
+    
     # Generate precomputed files and collect data for plotting
     levels_data = []
     successful_levels = 0
@@ -253,6 +400,7 @@ def generate_levels(algo_name, y_data):
     
     # LEVELS 1-100: Apply transformations
     extra_params = config.get('extra_params', {})
+    algo_type = config.get('algorithm_type', 'transformer')
     
     for i, param_value in enumerate(param_values):
         level_idx = i + 1  # Levels 1-100
@@ -261,18 +409,71 @@ def generate_levels(algo_name, y_data):
             all_params = {param_name: param_value}
             all_params.update(extra_params)
             
-            # Apply algorithm
-            y_smooth = transformers.apply(algo_name, y_data, **all_params)
-            pae_value = get_pae(y_smooth)
+            # Apply algorithm - route to correct module
+            if algo_type == 'reducer':
+                # Reducers need x,y pairs
+                x_data = np.arange(len(y_data))
+                data_pairs = list(zip(x_data, y_data))
+                result = reducers.apply(algo_name, data_pairs, **all_params)
+                
+                # Reducers return list of (x, y) tuples
+                # Store the reduced output as-is (authentic to the algorithm)
+                if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
+                    y_smooth = result  # Keep as list of (x, y) tuples
+                else:
+                    y_smooth = result
+            elif algo_type == 'aggregator':
+                # Aggregators need x,y pairs
+                x_data = np.arange(len(y_data))
+                data_pairs = list(zip(x_data, y_data))
+                result = aggregators.apply(algo_name, data_pairs, **all_params)
+                
+                # Aggregators return list of (x, y) tuples
+                # Store the aggregated output as-is (authentic to the algorithm)
+                if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
+                    y_smooth = result  # Keep as list of (x, y) tuples
+                else:
+                    y_smooth = result
+            else:
+                # Transformers work on y values only
+                y_smooth = transformers.apply(algo_name, y_data, **all_params)
+            
+            # Calculate PAE - for reducers/aggregators, interpolate back to original length
+            if isinstance(y_smooth, list) and len(y_smooth) > 0 and isinstance(y_smooth[0], tuple):
+                # Reducer/Aggregator output: list of (x, y) tuples
+                # Interpolate to original data length for fair PAE comparison
+                if len(y_smooth) < len(y_data):
+                    # Extract x and y from tuples
+                    x_smooth = np.array([x for x, y in y_smooth])
+                    y_smooth_vals = np.array([y for x, y in y_smooth])
+                    
+                    # Interpolate to original x positions
+                    x_original = np.arange(len(y_data))
+                    y_for_pae = np.interp(x_original, x_smooth, y_smooth_vals).tolist()
+                else:
+                    # If somehow we have same or more points, just extract y values
+                    y_for_pae = [y for x, y in y_smooth]
+            else:
+                # Transformer output: already y-values at original length
+                y_for_pae = y_smooth
+            
+            pae_value = get_pae(y_for_pae)
             
             # Save to file
             filename = f"{PRECOMPUTED_DIR}/{algo_name}_level_{level_idx}.json"
             
-            # Ensure y_smooth is a list for JSON serialization
+            # Ensure y_smooth is JSON serializable
             if isinstance(y_smooth, np.ndarray):
                 y_smooth_list = y_smooth.tolist()
+            elif isinstance(y_smooth, list):
+                # Could be list of tuples (reducers) or list of values (transformers)
+                if len(y_smooth) > 0 and isinstance(y_smooth[0], tuple):
+                    # List of (x, y) tuples - convert to list of lists for JSON
+                    y_smooth_list = [[float(x), float(y)] for x, y in y_smooth]
+                else:
+                    y_smooth_list = y_smooth
             else:
-                y_smooth_list = y_smooth
+                y_smooth_list = list(y_smooth)
             
             output_data = {
                 "dataset_name": TEST_DATASET,
@@ -341,7 +542,11 @@ def plot_levels(algo_name, levels_data):
     dataset_plot_dir = os.path.join('plots', TEST_DATASET)
     os.makedirs(dataset_plot_dir, exist_ok=True)
     
-    plot_filename = os.path.join(dataset_plot_dir, f"{algo_name}_100levels.png")
+    # Add suffix based on whether logscale is used
+    use_logscale = ALGORITHMS_CONFIG[algo_name].get('use_logscale', False)
+    suffix = "" if use_logscale else "_linear"
+    
+    plot_filename = os.path.join(dataset_plot_dir, f"{algo_name}_100levels{suffix}.png")
     plt.tight_layout()
     plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
     plt.close()
@@ -349,7 +554,7 @@ def plot_levels(algo_name, levels_data):
     print(f"✓ Saved plot to {plot_filename}")
     
     # Save CSV (include level 0)
-    csv_filename = os.path.join(dataset_plot_dir, f"{algo_name}_100levels.csv")
+    csv_filename = os.path.join(dataset_plot_dir, f"{algo_name}_100levels{suffix}.csv")
     with open(csv_filename, 'w') as f:
         f.write("level,param_value,pae\n")
         for d in levels_data:

@@ -250,7 +250,8 @@ def asap_smoother(data: list[tuple],
                       resolution: int | None = None) -> list[tuple]:
     """
     Apply notebook-style ASAP smoothing to (x,y) and return aggregated output.
-    x is aligned to the right edge of each window: x_out[k] = x[w-1+k].
+    X-coordinates are interpolated to span the full range [x_min, x_max], ensuring
+    points at both endpoints (same strategy as bin_average_aggregator).
     """
     if not data:
         return []
@@ -260,13 +261,33 @@ def asap_smoother(data: list[tuple],
     x = arr[:, 0]
     y = arr[:, 1]
 
+    # Store original x-range for interpolation
+    x_min = x[0]
+    x_max = x[-1]
+
     # Ignore trailing NaN (matches JS/nb behavior)
     if np.isnan(y[-1]):
         y = y[:-1]
         x = x[:-1]
 
     w, slide = smooth_ASAP(y, max_window=max_window, resolution=resolution)
+    
+    # Apply pre-aggregation if slide > 1 (resolution triggered)
+    if slide > 1:
+        # Pre-aggregate the data first
+        y = SMA(y, slide, slide)
+        # Don't adjust x yet - we'll interpolate after smoothing
+    
+    # Apply the chosen window size
     y_s = SMA(y, w, 1)
-    x_out = x[w - 1:]
-    L = min(len(x_out), len(y_s))
-    return list(map(tuple, np.column_stack((x_out[:L], y_s[:L]))))
+    
+    # Interpolate x-coordinates to span full range [x_min, x_max]
+    output_length = len(y_s)
+    if output_length == 1:
+        x_out = np.array([(x_min + x_max) / 2.0])  # center for single point
+    else:
+        # Map output indices to range [x_min, x_max]
+        # idx=0 → x_min, idx=output_length-1 → x_max
+        x_out = np.linspace(x_min, x_max, output_length)
+    
+    return list(map(tuple, np.column_stack((x_out, y_s))))

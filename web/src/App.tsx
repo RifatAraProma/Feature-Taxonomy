@@ -50,7 +50,24 @@ export default function App(){
         const allLevels: any = {};
         if (data.allOutputs) {
           for (const levelData of data.allOutputs) {
-            const yhat = levelData.output.map((y: number, idx: number) => ({t: idx + 1, y}));
+            // Handle both formats:
+            // - Transformers: array of y-values [y1, y2, y3, ...]
+            // - Reducers: array of [x, y] tuples [[x1, y1], [x2, y2], ...]
+            let yhat;
+            if (levelData.output && levelData.output.length > 0) {
+              if (Array.isArray(levelData.output[0])) {
+                // Reducer format: [[x, y], [x, y], ...]
+                // x is already 0-indexed, convert to 1-indexed for chart (t starts at 1)
+                yhat = levelData.output.map((pair: [number, number]) => ({t: pair[0] + 1, y: pair[1]}));
+                console.log(`[DEBUG] Reducer format detected. First 3 pairs:`, levelData.output.slice(0, 3), '→', yhat.slice(0, 3));
+              } else {
+                // Transformer format: [y, y, y, ...]
+                yhat = levelData.output.map((y: number, idx: number) => ({t: idx + 1, y}));
+                console.log(`[DEBUG] Transformer format detected. Length: ${levelData.output.length}`);
+              }
+            } else {
+              yhat = [];
+            }
             
             allLevels[levelData.level] = {
               yhat: yhat,
@@ -109,6 +126,7 @@ export default function App(){
     if (precomputedCache && precomputedCache.allLevels && precomputedCache.allLevels[param]) {
       console.log(`[PRECOMPUTED] ✓ Using cached level ${param}`);
       const cached = precomputedCache.allLevels[param];
+      console.log(`[DEBUG] Setting smooth data: ${cached.yhat.length} points, first 3:`, cached.yhat.slice(0, 3));
       setSmooth(cached.yhat);
       setAspect(cached.banking?.aspect || 1.0);
       setMetrics(cached.metrics);

@@ -43,15 +43,65 @@ def filter_tda_count(data, threshold):
     count = math.ceil(__linear_map(threshold, 0, 1, len(pairs)-1, 0))
     return __rebuild(data, pairs[count:])
 
-def filter_tda_threshold_indices(data, threshold):
+def filter_tda_count_indices(data, threshold):
+    """
+    Same as filter_tda_count but returns indices instead of rebuilt data.
+    
+    Parameters
+    ----------
+    data : array-like
+        Input y-values
+    threshold : float in [0, 1]
+        Normalized threshold (0 = keep most pairs, 1 = keep fewest pairs)
+    
+    Returns
+    -------
+    list[int]
+        Indices of critical points (no interpolation, just actual data points)
+    """
+    threshold = min(1, max(0, threshold))
     cps = pd._extract_cps(data)
     pairs = pd._pair_cps(cps)
-    filtered_pairs = filter(lambda p: p['persistence'] >= threshold, pairs)
+    count = math.ceil(__linear_map(threshold, 0, 1, len(pairs)-1, 0))
+    filtered_pairs = pairs[count:]
     
-    indices = []
+    indices = set()
     for p in filtered_pairs:
-        indices.append(p['c0'])
-        indices.append(p['c1'])
+        # Only add valid indices (exclude sentinel values -1 and len(data))
+        if 0 <= p['c0'] < len(data):
+            indices.add(p['c0'])
+        if 0 <= p['c1'] < len(data):
+            indices.add(p['c1'])
     
-    return indices
+    return sorted(list(indices))
+
+def filter_tda_threshold_indices(data, threshold):
+    """
+    Extract indices of topologically significant points based on persistence threshold.
+    
+    Parameters
+    ----------
+    data : array-like
+        Input y-values
+    threshold : float
+        Persistence threshold (higher = fewer points)
+    
+    Returns
+    -------
+    list[int]
+        Indices of significant points (valid indices only, excluding sentinel values)
+    """
+    cps = pd._extract_cps(data)
+    pairs = pd._pair_cps(cps)
+    filtered_pairs = list(filter(lambda p: p['persistence'] >= threshold, pairs))
+    
+    indices = set()
+    for p in filtered_pairs:
+        # Only add valid indices (exclude sentinel values -1 and len(data))
+        if 0 <= p['c0'] < len(data):
+            indices.add(p['c0'])
+        if 0 <= p['c1'] < len(data):
+            indices.add(p['c1'])
+    
+    return sorted(list(indices))
 

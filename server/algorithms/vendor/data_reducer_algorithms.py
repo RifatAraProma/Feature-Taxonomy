@@ -4,8 +4,9 @@ import numpy as np
 from plotly_resampler.aggregation import EveryNthPoint
 from tsdownsample.downsamplers import M4Downsampler, MinMaxDownsampler, MinMaxLTTBDownsampler, LTTBDownsampler
 from .douglas_peucker.douglas_peucker import rdp_iter_count
-from .topology.topolines import filter_tda_threshold_indices
+from .topology.topolines import filter_tda_count_indices
 from .fpcs.fpcs_sampling import Fpcs
+import math
 
 # ---- helpers ----
 def _xy_from_pairs(data:list[tuple]):
@@ -34,6 +35,9 @@ def m4_downsample(data: list[tuple], output_length: int) -> list[tuple]:
         Round requested output_length up to the next valid multiple of 4,
         clamp to len(data), and require >= 8.
       - If dataset length < 8 -> fallback to returning original (safe).
+      
+    Note: M4 internally uses n_out/4 bins, and Rust requires nb_bins >= 2,
+          so the absolute minimum is 8 points (8/4 = 2 bins).
     """
     if not data:
         return []
@@ -49,7 +53,7 @@ def m4_downsample(data: list[tuple], output_length: int) -> list[tuple]:
         return data
 
     # Compute safe n_out:
-    #  - at least 8
+    #  - at least 8 (M4 uses n_out/4 bins, Rust requires nb_bins >= 2)
     #  - at most n
     #  - a multiple of 4 (round up)
     requested = int(output_length)
@@ -62,7 +66,7 @@ def m4_downsample(data: list[tuple], output_length: int) -> list[tuple]:
         if safe_n > n:
             safe_n = n
 
-    # final guard: safe_n must be >= 8 to avoid Rust panic
+    # final guard: safe_n must be >= 8 to avoid Rust panic (nb_bins >= 2 requirement)
     if safe_n < 8:
         return list(data)
 
@@ -197,34 +201,60 @@ def rdp_downsample(data: list[tuple], output_length: int) -> list[tuple]:
     return [(row[0], row[1]) for row in reduced]
 
 
-def tda_downsample(data: list[tuple], threshold: float) -> list[tuple]:
+def tda_downsample(data: list[tuple], filter_level: float) -> list[tuple]:
     """
-    TDA smoothing (full-length) using topology.filter_tda_count with a slider in [0, 1].
+    TDA downsampling using topology.filter_tda_count_indices with count-based filtering.
+    
+    Uses topological persistence to identify significant points. The filter_level is
+    mapped through exponential space (matching original filter_tda_count behavior) to
+    produce intuitive downsampling progression. Unlike filter_tda_count, this returns
+    original data points without isotonic regression rebuild.
 
     Parameters
     ----------
     data : list[(x, y)]
         Input series as (x, y) pairs.
-    threshold : float in [0, 1]
-        Slider controlling how many topological features (peak–valley pairs) are kept.
-        - threshold = 0.0  -> keep *fewest* pairs (only the most persistent) -> **strongest smoothing**.
-        - threshold = 1.0  -> keep *all* pairs (including tiny wiggles)     -> **least smoothing**.
+    filter_level : float in [0, 1]
+        Control parameter for downsampling level (exponentially scaled).
+        - filter_level = 0.0  -> keep *most* points (closest to original, minimal downsampling).
+        - filter_level = 1.0  -> keep *fewest* points (most simplified, maximum downsampling).
 
     Returns
     -------
-    list[(x, y_smoothed)]
-       returns points that survive the threshold cut-off.
-
-   
-    """
-    if threshold is None or not (0.0 <= float(threshold) <= 1.0):
-        raise ValueError(" threshold must be between 0 to 1")
+    list[(x, y)]
+       Downsampled points based on topological persistence (reduced length).
+    """    
+    if filter_level is None or not (0.0 <= float(filter_level) <= 1.0):
+        raise ValueError("filter_level must be between 0 and 1")
+    
+    def __linear_map(val, in0, in1, out0, out1):
+        t = (val - in0) / (in1 - in0)
+        return out0 * (1 - t) + out1 * t
     
     x, y = _xy_from_pairs(data)
-    idxs = filter_tda_threshold_indices(y, threshold)
-    idxs_arr = np.asarray(idxs, dtype=int).ravel()
     
-    return _pairs_from_indices(x, y, idxs_arr)
+    # Apply exponential scaling (matching original filter_tda_count):
+    # Map filter_level (0→1) to exponential scale (1→100), then map to threshold (0→1)
+    # Level 0: exp(log(1)) = 1 → threshold 0.0 (most points)
+    # Level 100: exp(log(100)) = 100 → threshold 1.0 (fewest points)
+    scaled_level = __linear_map(filter_level, 1, 0, math.log(1), math.log(100))
+    threshold = __linear_map(math.exp(scaled_level), 1, 100, 0, 1.0)
+    
+    # Get indices using count-based filtering (no rebuild, preserves original points)
+    indices = filter_tda_count_indices(y, threshold)
+    
+    if not indices:
+        # If no points pass threshold, return endpoints
+        return [(x[0], y[0]), (x[-1], y[-1])]
+    
+    # Ensure we include first and last points
+    indices_set = set(indices)
+    indices_set.add(0)
+    indices_set.add(len(y) - 1)
+    
+    # Sort indices and return corresponding (x, y) pairs
+    sorted_indices = sorted(indices_set)
+    return [(x[i], y[i]) for i in sorted_indices]
 
 
 def fpcs_downsample(data: list[tuple], rate: int) -> list[tuple]:

@@ -21,10 +21,17 @@ def _pairs_from_indices(x, y, idxs):
     return [(x[i], y[i]) for i in idxs.astype(int)]
 
 def apply(method: str, y, **params):
-    # Convert y to (x, y) pairs if necessary
-    y_arr = np.asarray(y, dtype=float)
-    x_arr = np.arange(len(y_arr))
-    data_pairs = list(zip(x_arr, y_arr))
+    # Check if y is already pairs (list of tuples) or just y values
+    if isinstance(y, list) and len(y) > 0 and isinstance(y[0], tuple):
+        # Already have (x, y) pairs
+        data_pairs = y
+        x_arr = np.array([pair[0] for pair in data_pairs], dtype=float)
+        y_arr = np.array([pair[1] for pair in data_pairs], dtype=float)
+    else:
+        # Convert y to (x, y) pairs
+        y_arr = np.asarray(y, dtype=float)
+        x_arr = np.arange(len(y_arr))
+        data_pairs = list(zip(x_arr, y_arr))
     
     # Handle class-based algorithms with special logic
     if method == "EveryNthPoint":
@@ -32,7 +39,8 @@ def apply(method: str, y, **params):
         step = params.get("step", 2)
         # EveryNthPoint works with indices directly
         idxs = list(range(0, len(data_pairs), step))
-        return [float(y_arr[i]) for i in idxs if i < len(y_arr)]
+        # Return as (x, y) tuples
+        return [(float(x_arr[i]), float(y_arr[i])) for i in idxs if i < len(y_arr)]
     
     elif method == "Fpcs":
         from .vendor.fpcs.fpcs_sampling import Fpcs
@@ -43,14 +51,16 @@ def apply(method: str, y, **params):
             emitted = fpcs.push_data(node)
             if emitted:
                 output.extend(emitted)
-        return [float(pair[1]) for pair in output]
+        # Output already contains tuples, ensure they're floats
+        return [(float(pair[0]), float(pair[1])) for pair in output]
     
     elif method in ["LTTBDownsampler", "M4Downsampler", "MinMaxDownsampler", "MinMaxLTTBDownsampler"]:
         from tsdownsample.downsamplers import LTTBDownsampler, M4Downsampler, MinMaxDownsampler, MinMaxLTTBDownsampler
         
         output_length = params.get("output_length", 5)
         if output_length >= len(data_pairs):
-            return y_arr.tolist()
+            # Return as (x, y) tuples
+            return [(float(x_arr[i]), float(y_arr[i])) for i in range(len(y_arr))]
             
         x, y = _xy_from_pairs(data_pairs)
         x = np.ascontiguousarray(x, dtype=float)
@@ -65,7 +75,8 @@ def apply(method: str, y, **params):
                 if adjusted_length % 4 != 0:
                     adjusted_length = (adjusted_length // 4) * 4
                 if adjusted_length < 8:
-                    return y_arr.tolist()  # Fallback for small data
+                    # Return as (x, y) tuples
+                    return [(float(x_arr[i]), float(y_arr[i])) for i in range(len(y_arr))]
             downsampler = M4Downsampler()
         elif method == "MinMaxDownsampler":
             # MinMax requires even number and minimum 2
@@ -73,7 +84,8 @@ def apply(method: str, y, **params):
             if adjusted_length > len(data_pairs):
                 adjusted_length = (len(data_pairs) // 2) * 2
                 if adjusted_length < 2:
-                    return y_arr.tolist()  # Fallback for small data
+                    # Return as (x, y) tuples
+                    return [(float(x_arr[i]), float(y_arr[i])) for i in range(len(y_arr))]
             downsampler = MinMaxDownsampler()
         elif method == "LTTBDownsampler":
             adjusted_length = max(3, output_length)  # LTTB minimum is 3
@@ -84,37 +96,21 @@ def apply(method: str, y, **params):
         
         # Additional safety check
         if adjusted_length >= len(data_pairs):
-            return y_arr.tolist()
+            # Return as (x, y) tuples
+            return [(float(x_arr[i]), float(y_arr[i])) for i in range(len(y_arr))]
         
         idxs = downsampler.downsample(x, y, n_out=adjusted_length)
-        return [float(y[i]) for i in idxs]
-    
-    # Handle the reclassified window-based selection filters
-    elif method == "median_filter_reducer":
-        from .vendor.data_reducer_algorithms import median_filter_reducer
-        window_size = params.get("window_size", 3)
-        result_pairs = median_filter_reducer(data_pairs, window_size)
-        return [float(pair[1]) for pair in result_pairs]
-    
-    elif method == "min_filter_reducer":
-        from .vendor.data_reducer_algorithms import min_filter_reducer  
-        window_size = params.get("window_size", 3)
-        result_pairs = min_filter_reducer(data_pairs, window_size)
-        return [float(pair[1]) for pair in result_pairs]
-        
-    elif method == "max_filter_reducer":
-        from .vendor.data_reducer_algorithms import max_filter_reducer
-        window_size = params.get("window_size", 3)  
-        result_pairs = max_filter_reducer(data_pairs, window_size)
-        return [float(pair[1]) for pair in result_pairs]
+        # Return as (x, y) tuples
+        return [(float(x[i]), float(y[i])) for i in idxs]
     
     # Handle function-based algorithms (existing logic)
     if method in CALLS:
         result_pairs = CALLS[method](data_pairs, **params)
-        # Extract y values from result
+        # Result should already be pairs, ensure they're floats
         if isinstance(result_pairs, list) and len(result_pairs) > 0:
             if isinstance(result_pairs[0], tuple):
-                return [float(pair[1]) for pair in result_pairs]
+                return [(float(pair[0]), float(pair[1])) for pair in result_pairs]
+        # If not tuples, convert to array and return
         return np.asarray(result_pairs).tolist()
     
     raise ValueError(f"Unknown reducer method: {method}")
