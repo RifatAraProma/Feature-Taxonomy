@@ -141,7 +141,7 @@ class PrecomputedLoader:
             level: Level index (0 to num_levels-1)
         
         Returns:
-            dict with keys: output, param_name, param_value, pae, num_levels
+            dict with keys: output, param_name, param_value, pae, num_levels, features, feature_preservation
             Returns None if not found or level out of range
         """
         metadata = self._scan_algorithm_levels(dataset_id, algorithm)
@@ -162,7 +162,9 @@ class PrecomputedLoader:
             'param_value': level_data.get('parameter_value'),
             'pae': level_data.get('pae'),
             'output_length': level_data.get('output_length'),
-            'num_levels': metadata['num_levels']
+            'num_levels': metadata['num_levels'],
+            'features': level_data.get('features', {}),
+            'feature_preservation': level_data.get('feature_preservation', {})
         }
     
     def get_algorithm_info(self, dataset_id, algorithm):

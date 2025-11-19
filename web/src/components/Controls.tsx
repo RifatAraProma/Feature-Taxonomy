@@ -286,8 +286,8 @@ export default function Controls(p: Props) {
               fontWeight: 600
             }}>
               {p.smoothLength < p.origLength 
-                ? `📉 Reduced by ${Math.round(((p.origLength - p.smoothLength) / p.origLength) * 100)}%`
-                : `✓ Full Resolution (Transformer)`
+                ? `Reduced by ${Math.round(((p.origLength - p.smoothLength) / p.origLength) * 100)}%`
+                : `Full Resolution (Transformer)`
               }
             </div>
           </div>

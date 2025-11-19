@@ -73,8 +73,10 @@ export default function App(){
               yhat: yhat,
               params: {[data.paramName]: levelData.paramValue},
               banking: {aspect: 1.0, heightPx: 0},
-              features: {original: {}, simplified: {}},
-              metrics: {},
+              features: levelData.features || {original: {}, simplified: {}},
+              metrics: {
+                featurePreservation: levelData.featurePreservation || {}
+              },
               pae: levelData.pae,
               paramName: data.paramName,
               paramValue: levelData.paramValue
@@ -213,7 +215,7 @@ export default function App(){
           overflow: 'auto'
         }}>
           <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
-          <MetricsBar metrics={metrics} />
+          <MetricsBar metrics={metrics} datasetId={dataset} />
         </div>
       </div>
 

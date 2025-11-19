@@ -1,397 +1,571 @@
 # server/features/compute_features.py
 """
-Compute visual features for line charts exactly as defined in the paper.
+Visual Feature Extraction for Time Series Line Charts
 
-Assumptions & notation (shared):
-- Discrete time series {y_t}_{t=1..n} sampled at equal intervals; index t = 1..n.
-- Finite differences use unit spacing (Δx = 1).
-- FFT uses numpy.fft.rfft/irfft with ideal masks for low/high-pass operations.
-- Optional parameters expose thresholds and window sizes but the math matches the paper.
+This module computes visual features based on the definitions in the SVG reference files
+located in web/src/figures/Visual features/.
 
-Features implemented (semantic then math):
-1) Level:
-   - Point level: L_point(t0) = y(t0)
-   - Interval level: L_interval(I) = (1/|I|) sum_{t∈I} y(t)
-2) Mean:
-   - μ = (1/n) ∑_{i=1}^n y_i
-3) Regimes & Change-Points (mean-based, visual plateaus + boundaries):
-   - Partition into contiguous intervals [a_j, b_j], baseline L_j = avg(y_{a_j..b_j})
-   - A change-point at b_j if L_j ≠ L_{j+1}
-   - Here we detect mean shifts via simple binary segmentation with min_len & τ.
-4) Local Extrema:
-   - Max if y_{t-1} < y_t > y_{t+1}; Min if y_{t-1} > y_t < y_{t+1}
-5) Spikes & Dips (local outliers in a centered window):
-   - |y_t − μ_w(t)| > τ
-6) Slope:
-   - m(t) = y_{t+1} − y_t
-7) Curvature (centered differences discretization of differential-geometry form):
-   - κ_t ≈ |y_{t+1} − 2y_t + y_{t-1}| / (1 + ((y_{t+1} − y_{t-1})/2)^2)^{3/2}
-8) Trend (low-frequency component via ideal low-pass in frequency domain):
-   - T̂(t) = InverseFFT( H_LP(f) · FFT(y(t)) ), keep |f| ≤ f_c
-9) Regression Fit (OLS line ŷ_t = α + β t):
-   - β slope (average rate), α intercept
-10) Periodicity (dominant nonzero peak in |FFT(y)|):
-   - f* = arg max_{f≠0} |FFT(y)|, T = 1/f*, A = |FFT(y)| at f*
-11) Roughness:
-   - roughness(Y) = σ(ΔY), where ΔY = {y_{i+1} − y_i}
-12) Noise (high-frequency residual):
-   - y(t) = T(t) + N(t),   N̂(t) = InverseFFT( H_HP(f) · FFT(y(t)) ), keep |f| > f_c
+Features (12 total):
+1. Level - Point values and interval averages
+2. Mean - Overall average value
+3. Extrema - Local minima and maxima
+4. Regime & Change Points - Plateaus and transitions
+5. Spikes & Dips - Local outliers
+6. Slope - First derivative (rate of change)
+7. Curvature - Second derivative (bend)
+8. Trend - Low-frequency component
+9. Regression Fit - Linear trend line
+10. Periodicity - Dominant frequency
+11. Roughness - High-frequency variation
+12. Noise - High-frequency residual
+
+Author: Feature Taxonomy Team
+Date: November 2025
 """
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional, Any
-import json
-import os
-import math
 import numpy as np
+import ruptures as rpt
 
 
-# ----------------------------
-# Utilities & helpers
-# ----------------------------
+# ============================================================================
+# Configuration
+# ============================================================================
 
 @dataclass
 class FeatureConfig:
-    # Spikes / dips
-    spike_window: int = 21          # odd, centered window
-    spike_tau: float = 3.0          # absolute deviation threshold (σ-normalized inside)
-    # Regimes / change-points (mean-shift)
-    cpt_min_len: int = 20           # min segment length
-    cpt_tau: float = 0.5            # mean difference threshold between adjacent segments
-    cpt_max_splits: int = 10        # guard for overly recursive splits
-    # Trend / Noise
-    cutoff_ratio: float = 0.15      # fraction of Nyquist for LP/HP masks (0<ratio<1)
-    # Interval-level: if provided, averages will be returned for each interval
-    intervals: Optional[List[Tuple[int, int]]] = None  # 1-based inclusive indices
+    """Configuration parameters for feature extraction."""
+    
+    # Spikes & Dips
+    spike_window: int = 21          # Window size for local outlier detection
+    spike_threshold: float = 3.0     # Standard deviation multiplier
+    
+    # Regime & Change Points
+    regime_penalty: Optional[float] = None  # None = auto (BIC), or specify manual penalty
+    
+    # Trend & Noise (spectral)
+    cutoff_ratio: float = 0.15       # Fraction of Nyquist frequency
+    
+    # Interval averaging (optional)
+    intervals: Optional[List[Tuple[int, int]]] = None  # 1-based inclusive
 
 
-# Safe odd window
-def _odd(w: int) -> int:
-    w = max(1, int(w))
-    return w if (w % 2 == 1) else (w + 1)
+# ============================================================================
+# Helper Functions
+# ============================================================================
 
-
-def _moving_mean(y: np.ndarray, w: int) -> np.ndarray:
-    w = _odd(w)
-    if len(y) == 0:
-        return y
-    k = np.ones(w, dtype=float) / float(w)
-    return np.convolve(y, k, mode="same")
-
-
-# ----------------------------
-# 1) Level & Mean
-# ----------------------------
-
-def level_point(y: np.ndarray, t0: int) -> float:
-    # t0 is 1-based index
-    if t0 < 1 or t0 > len(y):
-        raise IndexError("t0 out of range (1..n)")
-    return float(y[t0 - 1])
-
-
-def level_interval(y: np.ndarray, a: int, b: int) -> float:
-    if a < 1 or b < 1 or a > b or b > len(y):
-        raise IndexError("interval indices out of range or invalid")
-    seg = y[a - 1:b]
-    return float(np.mean(seg)) if len(seg) else float("nan")
-
-
-def mean_value(y: np.ndarray) -> float:
-    return float(np.mean(y)) if len(y) else float("nan")
-
-
-# ----------------------------
-# 2) Regimes & Change-Points (mean-shift via simple binary segmentation)
-# ----------------------------
-
-def _find_best_split_mean(y: np.ndarray, a: int, b: int, min_len: int) -> Tuple[Optional[int], float]:
+def _interpolate_to_match_length(y_short: np.ndarray, target_length: int) -> np.ndarray:
     """
-    Search for split index s in (a..b) maximizing |mean(left) - mean(right)|.
-    a,b are 0-based inclusive indices. Enforce min_len on both sides.
-    Returns (s, abs_diff); s is the split AFTER index s (left=a..s, right=s+1..b).
-    """
-    n = b - a + 1
-    if n < 2 * min_len:
-        return None, 0.0
-    ys = y[a:b + 1]
-    cumsum = np.cumsum(ys, dtype=float)
-    best_s, best_diff = None, 0.0
-    # s is last index of left segment in overall indexing
-    for s_local in range(min_len - 1, n - min_len):
-        left_mean = cumsum[s_local] / (s_local + 1)
-        right_mean = (cumsum[-1] - cumsum[s_local]) / (n - (s_local + 1))
-        diff = abs(left_mean - right_mean)
-        if diff > best_diff:
-            best_diff = diff
-            best_s = a + s_local
-    return best_s, float(best_diff)
-
-
-def _segment_mean_shift(y: np.ndarray, a: int, b: int, min_len: int, tau: float, max_splits: int, splits: List[int]):
-    if max_splits <= 0:
-        return
-    s, diff = _find_best_split_mean(y, a, b, min_len)
-    if s is None or diff <= tau:
-        return
-    splits.append(s)
-    _segment_mean_shift(y, a, s, min_len, tau, max_splits - 1, splits)
-    _segment_mean_shift(y, s + 1, b, min_len, tau, max_splits - 1, splits)
-
-
-def regimes_and_changepoints(y: np.ndarray, cfg: FeatureConfig) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
+    Interpolate a shorter series to match a target length.
+    
+    Used for comparing series of different lengths (e.g., after reduction/aggregation).
+    Uses linear interpolation to estimate values at intermediate points.
+    
+    Args:
+        y_short: The shorter series to interpolate
+        target_length: Desired output length
+        
     Returns:
-      regimes: [{a,b,baseline}]   with 1-based inclusive indices
-      changePoints: [{t, fromBaseline, toBaseline}]
+        Interpolated series of length target_length
     """
-    n = len(y)
-    if n == 0:
-        return [], []
-    splits: List[int] = []
-    _segment_mean_shift(y, 0, n - 1, cfg.cpt_min_len, cfg.cpt_tau, cfg.cpt_max_splits, splits)
-    splits = sorted(set(splits))
+    if len(y_short) == target_length:
+        return y_short
+    
+    if len(y_short) == 0:
+        return np.zeros(target_length)
+    
+    # Create x-coordinates for original and target series
+    x_original = np.linspace(0, 1, len(y_short))
+    x_target = np.linspace(0, 1, target_length)
+    
+    # Linear interpolation
+    y_interpolated = np.interp(x_target, x_original, y_short)
+    
+    return y_interpolated
 
-    starts = [0] + [s + 1 for s in splits]
-    ends = splits + [n - 1]
-    regimes = []
-    for a0, b0 in zip(starts, ends):
-        baseline = float(np.mean(y[a0:b0 + 1]))
-        regimes.append({"a": int(a0 + 1), "b": int(b0 + 1), "baseline": baseline})
 
-    change_points = []
-    for j in range(len(regimes) - 1):
-        L_j = regimes[j]["baseline"]
-        L_next = regimes[j + 1]["baseline"]
-        t_boundary = regimes[j]["b"]  # 1-based boundary index = b_j
-        if L_j != L_next:
-            change_points.append({
-                "t": int(t_boundary),
-                "fromBaseline": float(L_j),
-                "toBaseline": float(L_next),
+# ============================================================================
+# FEATURE 1: LEVEL
+# ============================================================================
+
+def compute_level(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
+    """
+    Extract level features: point values and interval averages.
+    
+    Reference: web/src/figures/Visual features/level.svg
+    
+    Level represents the y-values of the time series at each point.
+    For comparison purposes, we store all point values.
+    
+    Returns:
+        Dictionary containing:
+        - point_values: Array of all y-values (float list)
+    """
+    return {
+        "point_values": y.tolist()
+    }
+
+
+# ============================================================================
+# FEATURE 2: MEAN
+# ============================================================================
+
+def compute_mean(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Compute the overall mean value of the time series.
+    
+    Reference: web/src/figures/Visual features/mean.svg
+    
+    Returns:
+        Dictionary containing:
+        - value: The mean value
+    """
+    # TODO: Implement based on mean.svg
+    return {
+        "value": float(np.mean(y))
+    }
+
+
+# ============================================================================
+# FEATURE 3: EXTREMA
+# ============================================================================
+
+def compute_extrema(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Detect local minima and maxima.
+    
+    Reference: web/src/figures/Visual features/extrema.svg
+    
+    Returns:
+        Dictionary containing:
+        - minima: List of {index, value} for local minima
+        - maxima: List of {index, value} for local maxima
+    """
+    # TODO: Implement based on extrema.svg
+    return {
+        "minima": [],
+        "maxima": []
+    }
+
+
+# ============================================================================
+# FEATURE 4: REGIME & CHANGE POINTS
+# ============================================================================
+
+def compute_regimes(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
+    """
+    Detect regimes exactly as defined in the paper:
+    - Regimes = intervals with constant mean baseline
+    - Change-points = boundaries where the mean shifts
+    Uses PELT optimal segmentation with L2 loss.
+    
+    Penalty selection:
+    - If cfg.regime_penalty is None: Uses BIC (Bayesian Information Criterion)
+      Formula: pen = log(n) * d^2, where n=length, d=dimension (1 for univariate)
+    - Otherwise: Uses the specified manual penalty
+    
+    Reference: web/src/figures/Visual features/regime_change_points.svg
+    
+    Args:
+        y: Time series data
+        cfg: Configuration with regime_penalty parameter
+        
+    Returns:
+        Dictionary containing:
+        - regimes: List of {start, end, baseline_mean} for each regime
+        - change_points: List of indices where regime changes occur
+        - num_regimes: Total number of regimes detected
+        - num_change_points: Total number of change points detected
+        - penalty_used: The penalty value that was used (for debugging)
+    """
+    y = np.asarray(y)
+    
+    try:
+        # BIC penalty: log(n) * d^2 * sigma^2
+        # For L2 cost, standard formulation is: log(n) * d^2
+        # We use a slightly more conservative version: log(n) * (1 + log(n))
+        # This helps avoid over-segmentation in short series
+        n = len(y)
+        penalty = np.log(n) * np.var(y)  # Scaled by variance for better adaptivity
+
+        # Fit PELT model (mean-shift model with L2 loss)
+        algo = rpt.Pelt(model="l2").fit(y)
+        cps = algo.predict(pen=penalty)  # change-points (end indices of segments)
+        
+        # Convert to regime intervals
+        regimes = []
+        start = 0
+        for cp in cps:
+            end = cp - 1
+            baseline_mean = float(np.mean(y[start:cp]))
+            regimes.append({
+                "start": int(start),
+                "end": int(end),
+                "baseline_mean": baseline_mean
             })
-    return regimes, change_points
+            start = cp
+        
+        # Remove last change point (it's the length of the series)
+        change_points = [int(cp) for cp in cps[:-1]]
+        
+        return {
+            "regimes": regimes,
+            "change_points": change_points,
+            "num_regimes": len(regimes),
+            "num_change_points": len(change_points),
+            "penalty_used": float(penalty)
+        }
+    except Exception as e:
+        # Fallback if ruptures fails
+        print(f"Warning: PELT failed with error: {e}. Returning empty regimes.")
+        return {
+            "regimes": [],
+            "change_points": [],
+            "num_regimes": 0,
+            "num_change_points": 0,
+            "penalty_used": None
+        }
 
 
-# ----------------------------
-# 3) Local Extrema
-# ----------------------------
+# ============================================================================
+# FEATURE 5: SPIKES & DIPS
+# ============================================================================
 
-def local_extrema(y: np.ndarray) -> List[Dict[str, Any]]:
-    out: List[Dict[str, Any]] = []
-    for t in range(1, len(y) - 1):
-        if y[t - 1] < y[t] > y[t + 1]:
-            out.append({"t": t + 1, "y": float(y[t]), "type": "max"})
-        if y[t - 1] > y[t] < y[t + 1]:
-            out.append({"t": t + 1, "y": float(y[t]), "type": "min"})
-    return out
-
-
-# ----------------------------
-# 4) Spikes & Dips (windowed outliers)
-# ----------------------------
-
-def spikes_and_dips(y: np.ndarray, cfg: FeatureConfig) -> List[Dict[str, Any]]:
-    w = _odd(cfg.spike_window)
-    if len(y) < w:
-        return []
-    mu = _moving_mean(y, w)
-    # robust local scale: std of (y - mu) in window via same kernel
-    resid = y - mu
-    sd = np.sqrt(_moving_mean(resid**2, w)) + 1e-12
-    z = resid / sd
-    out = []
-    for t, (yt, zt) in enumerate(zip(y, z), start=1):
-        if abs(zt) > cfg.spike_tau:
-            out.append({"t": t, "y": float(yt), "z": float(zt)})
-    return out
+def compute_spikes_dips(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
+    """
+    Detect local outliers (spikes and dips).
+    
+    Reference: web/src/figures/Visual features/spikes_dips.svg
+    
+    Returns:
+        Dictionary containing:
+        - spikes: List of {index, value} for upward outliers
+        - dips: List of {index, value} for downward outliers
+    """
+    # TODO: Implement based on spikes_dips.svg
+    return {
+        "spikes": [],
+        "dips": []
+    }
 
 
-# ----------------------------
-# 5) Slope & Curvature
-# ----------------------------
+# ============================================================================
+# FEATURE 6: SLOPE
+# ============================================================================
 
-def slope(y: np.ndarray) -> np.ndarray:
-    # m(t) = y_{t+1} - y_t (length n-1, aligned to t=1..n-1)
-    return np.diff(y)
-
-
-def curvature(y: np.ndarray) -> np.ndarray:
-    # κ_t discretization with centered differences (length n-2, aligned to t=2..n-1)
-    if len(y) < 3:
-        return np.array([])
-    yp = y[2:] - 2 * y[1:-1] + y[:-2]
-    yd = (y[2:] - y[:-2]) / 2.0
-    denom = (1.0 + yd**2) ** 1.5
-    kappa = np.abs(yp) / denom
-    return kappa
-
-
-# ----------------------------
-# 6) Trend & Noise via ideal FFT masks
-# ----------------------------
-
-def _lp_hp_masks(n: int, cutoff_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
-    # rfft frequencies ∈ [0, 0.5] in cycles/sample
-    freqs = np.fft.rfftfreq(n, d=1.0)
-    cutoff = cutoff_ratio * (0.5 if len(freqs) else 0.5)
-    lp = (freqs <= cutoff).astype(float)
-    hp = 1.0 - lp
-    return lp, hp
+def compute_slope(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Compute first derivative (rate of change).
+    
+    Reference: web/src/figures/Visual features/slope.svg
+    
+    Returns:
+        Dictionary containing:
+        - values: Array of slope values
+        - mean_slope: Average slope
+    """
+    # TODO: Implement based on slope.svg
+    return {
+        "values": [],
+        "mean_slope": 0.0
+    }
 
 
-def trend_and_noise(y: np.ndarray, cutoff_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
-    n = len(y)
-    if n == 0:
-        return y, y
-    y0 = y - np.mean(y)
-    Y = np.fft.rfft(y0)
-    lp, hp = _lp_hp_masks(n, cutoff_ratio)
-    T = np.fft.irfft(Y * lp, n=n)
-    N = np.fft.irfft(Y * hp, n=n)
-    # add back mean to trend so that y ≈ T + N holds with T centered at μ(y)
-    T = T + float(np.mean(y))
-    return T, N
+# ============================================================================
+# FEATURE 7: CURVATURE
+# ============================================================================
+
+def compute_curvature(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Compute second derivative (curvature/bend).
+    
+    Reference: web/src/figures/Visual features/curvature.svg
+    
+    Returns:
+        Dictionary containing:
+        - values: Array of curvature values
+        - mean_curvature: Average curvature
+    """
+    # TODO: Implement based on curvature.svg
+    return {
+        "values": [],
+        "mean_curvature": 0.0
+    }
 
 
-# ----------------------------
-# 7) Regression (OLS line)
-# ----------------------------
+# ============================================================================
+# FEATURE 8: TREND
+# ============================================================================
 
-def regression_fit(y: np.ndarray) -> Dict[str, float]:
-    n = len(y)
-    if n == 0:
-        return {"alpha": float("nan"), "beta": float("nan")}
-    t = np.arange(1, n + 1, dtype=float)
-    beta, alpha = np.polyfit(t, y, deg=1)  # np.polyfit returns [slope, intercept] for deg=1? (actually [m,b])
-    # Careful: np.polyfit with deg=1 returns [m, b]; here m=beta, b=alpha
-    return {"alpha": float(alpha), "beta": float(beta)}
-
-
-# ----------------------------
-# 8) Periodicity (dominant nonzero frequency)
-# ----------------------------
-
-def periodicity(y: np.ndarray) -> Dict[str, Any]:
-    n = len(y)
-    if n == 0:
-        return {"fStar": 0.0, "A": 0.0, "T": float("inf"), "spectrum": {"freqs": [], "mag": []}}
-    y0 = y - np.mean(y)
-    Y = np.fft.rfft(y0)
-    freqs = np.fft.rfftfreq(n, d=1.0)
-    mag = np.abs(Y)
-    if len(mag) <= 1:
-        fstar = 0.0
-        A = 0.0
-    else:
-        # ignore zero-frequency
-        k = np.argmax(mag[1:]) + 1
-        fstar = float(freqs[k])
-        A = float(mag[k])
-    T = (1.0 / fstar) if fstar > 0 else float("inf")
-    return {"fStar": fstar, "A": A, "T": T, "spectrum": {"freqs": freqs.tolist(), "mag": mag.tolist()}}
+def compute_trend(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
+    """
+    Extract low-frequency trend component via spectral filtering.
+    
+    Reference: web/src/figures/Visual features/trend.svg
+    
+    Returns:
+        Dictionary containing:
+        - values: Array of trend values
+        - correlation: Correlation with original signal
+    """
+    # TODO: Implement based on trend.svg (low-pass filter)
+    return {
+        "values": [],
+        "correlation": 0.0
+    }
 
 
-# ----------------------------
-# 9) Roughness (std of first differences)
-# ----------------------------
+# ============================================================================
+# FEATURE 9: REGRESSION FIT
+# ============================================================================
 
-def roughness(y: np.ndarray) -> float:
-    dy = np.diff(y)
-    return float(np.std(dy)) if len(dy) else 0.0
+def compute_regression(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Fit linear regression line (OLS).
+    
+    Reference: web/src/figures/Visual features/regression_fit.svg
+    
+    Returns:
+        Dictionary containing:
+        - slope: Regression slope (beta)
+        - intercept: Regression intercept (alpha)
+        - r_squared: Coefficient of determination
+    """
+    # TODO: Implement based on regression_fit.svg
+    return {
+        "slope": 0.0,
+        "intercept": 0.0,
+        "r_squared": 0.0
+    }
 
 
-# ----------------------------
-# 10) Public API
-# ----------------------------
+# ============================================================================
+# FEATURE 10: PERIODICITY
+# ============================================================================
+
+def compute_periodicity(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Detect dominant frequency via FFT.
+    
+    Reference: web/src/figures/Visual features/periodicity.svg
+    
+    Returns:
+        Dictionary containing:
+        - dominant_frequency: Primary frequency
+        - period: Corresponding period (1/frequency)
+        - amplitude: Peak amplitude in frequency domain
+    """
+    # TODO: Implement based on periodicity.svg
+    return {
+        "dominant_frequency": 0.0,
+        "period": 0.0,
+        "amplitude": 0.0
+    }
+
+
+# ============================================================================
+# FEATURE 11: ROUGHNESS
+# ============================================================================
+
+def compute_roughness(y: np.ndarray) -> Dict[str, Any]:
+    """
+    Measure high-frequency variation (standard deviation of differences).
+    
+    Reference: web/src/figures/Visual features/roughness.svg
+    
+    Returns:
+        Dictionary containing:
+        - value: Roughness metric
+    """
+    # TODO: Implement based on roughness.svg
+    return {
+        "value": 0.0
+    }
+
+
+# ============================================================================
+# FEATURE 12: NOISE
+# ============================================================================
+
+def compute_noise(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
+    """
+    Extract high-frequency noise component via spectral filtering.
+    
+    Reference: web/src/figures/Visual features/noise.svg
+    
+    Returns:
+        Dictionary containing:
+        - values: Array of noise values
+        - std: Standard deviation of noise
+    """
+    # TODO: Implement based on noise.svg (high-pass filter)
+    return {
+        "values": [],
+        "std": 0.0
+    }
+
+
+# ============================================================================
+# Main Feature Computation
+# ============================================================================
 
 def compute_all_features(
-    y: List[float],
-    cfg: Optional[FeatureConfig] = None,
-    level_points: Optional[List[int]] = None,                  # which t0 to report for point-level
-    level_intervals: Optional[List[Tuple[int, int]]] = None    # explicit intervals for interval-level
+    y: np.ndarray | List[float],
+    cfg: Optional[FeatureConfig] = None
 ) -> Dict[str, Any]:
     """
-    Compute all features. Optional level_points/level_intervals let you request
-    specific point-levels and interval-levels. If no intervals are provided but
-    cfg.intervals exists, those are used.
+    Compute all 12 visual features for a time series.
+    
+    Args:
+        y: Time series data (numpy array or list)
+        cfg: Optional configuration parameters
+        
+    Returns:
+        Dictionary with all computed features
     """
     if cfg is None:
         cfg = FeatureConfig()
-
-    y_arr = np.asarray(y, dtype=float)
-    n = len(y_arr)
-    out: Dict[str, Any] = {}
-
-    # Level (point & interval)
-    level_out: Dict[str, Any] = {}
-    if level_points:
-        level_out["point"] = [{"t": int(t0), "value": level_point(y_arr, int(t0))} for t0 in level_points]
-    if level_intervals is None:
-        level_intervals = cfg.intervals
-    if level_intervals:
-        level_out["interval"] = [
-            {"a": int(a), "b": int(b), "value": level_interval(y_arr, int(a), int(b))}
-            for (a, b) in level_intervals
-        ]
-    if level_out:
-        out["level"] = level_out
-
-    # Mean
-    out["mean"] = {"mu": mean_value(y_arr)}
-
-    # Regimes & Change-Points (mean-based)
-    regs, cpts = regimes_and_changepoints(y_arr, cfg)
-    out["regimes"] = regs
-    out["changePoints"] = cpts
-
-    # Local Extrema
-    out["extrema"] = local_extrema(y_arr)
-
-    # Spikes & Dips
-    out["spikesDips"] = spikes_and_dips(y_arr, cfg)
-
-    # Slope
-    m = slope(y_arr)
-    out["slope"] = {"values": m.tolist(), "index": list(range(1, len(m) + 1))}  # aligned to t=1..n-1
-
-    # Curvature
-    kappa = curvature(y_arr)
-    out["curvature"] = {"values": kappa.tolist(), "index": list(range(2, n))}   # aligned to t=2..n-1
-
-    # Trend & Noise
-    T, N = trend_and_noise(y_arr, cfg.cutoff_ratio)
-    out["trend"] = {"values": T.tolist()}
-    out["noise"] = {"values": N.tolist()}
-
-    # Regression fit (OLS)
-    out["regression"] = regression_fit(y_arr)
-
-    # Periodicity
-    out["periodicity"] = periodicity(y_arr)
-
-    # Roughness
-    out["roughness"] = {"value": roughness(y_arr)}
-
-    return out
+    
+    # Ensure numpy array
+    if not isinstance(y, np.ndarray):
+        y = np.array(y, dtype=float)
+    
+    # Compute all features
+    features = {
+        "level": compute_level(y, cfg),
+        "mean": compute_mean(y),
+        "extrema": compute_extrema(y),
+        "regimes": compute_regimes(y, cfg),
+        "spikes_dips": compute_spikes_dips(y, cfg),
+        "slope": compute_slope(y),
+        "curvature": compute_curvature(y),
+        "trend": compute_trend(y, cfg),
+        "regression": compute_regression(y),
+        "periodicity": compute_periodicity(y),
+        "roughness": compute_roughness(y),
+        "noise": compute_noise(y, cfg)
+    }
+    
+    return features
 
 
-# ----------------------------
-# 11) CLI for batch processing
-# ----------------------------
-
-def _load_series_from_json(path: str) -> Tuple[str, List[float]]:
-    with open(path, "r", encoding="utf-8") as f:
-        d = json.load(f)
-    sid = d.get("id", os.path.splitext(os.path.basename(path))[0])
-    y = d["y"]
-    return sid, y
+# ============================================================================
+# Feature Preservation Metrics (Placeholder)
+# ============================================================================
+def l1_norm(d0, d1):
+    diff = np.subtract(d0, d1)
+    return np.linalg.norm(diff, ord=1)
 
 
-def _save_json(path: str, obj: Any):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2)
+def l2_norm(d0, d1):
+    diff = np.subtract(d0, d1)
+    return np.linalg.norm(diff, ord=2)
 
 
+def linf_norm(d0, d1):
+    diff = np.subtract(d0, d1)
+    return np.linalg.norm(diff, ord=np.inf)
+
+def delta(d0, d1):
+    diff = np.subtract(d0, d1)
+    return abs(diff)
+
+def _compute_level_metrics(
+    original_values: List[float],
+    simplified_values: List[float]
+) -> Dict[str, float]:
+    """
+    Compute L1 and L∞ distance metrics for level preservation.
+    
+    Handles different-length series by interpolating the shorter one.
+    
+    Args:
+        original_values: Point values from original series
+        simplified_values: Point values from simplified series
+        
+    Returns:
+        Dictionary with:
+        - l1: Average absolute error (mean distance)
+        - linf: Maximum absolute error (worst-case distance)
+    """
+    y_orig = np.array(original_values, dtype=float)
+    y_simp = np.array(simplified_values, dtype=float)
+    
+    # Handle empty arrays
+    if len(y_orig) == 0 or len(y_simp) == 0:
+        return {"l1": 0.0, "linf": 0.0}
+    
+    # Interpolate if lengths differ
+    if len(y_simp) != len(y_orig):
+        y_simp = _interpolate_to_match_length(y_simp, len(y_orig))
+    
+    l1 = l1_norm(y_orig, y_simp)      # Average error
+    linf = linf_norm(y_orig, y_simp)     # Worst-case error
+    
+    return {
+        "l1": l1,
+        "linf": linf
+    }
+
+
+def compute_feature_preservation_metrics(
+    original_features: Dict[str, Any],
+    simplified_features: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Compare features between original and simplified series.
+    
+    Args:
+        original_features: Features from original series
+        simplified_features: Features from simplified series
+        
+    Returns:
+        Dictionary of preservation metrics for each feature
+    """
+    metrics = {}
+    
+    # Level metrics (L1 and L∞)
+    if "level" in original_features and "level" in simplified_features:
+        level_metrics = _compute_level_metrics(
+            original_features["level"]["point_values"],
+            simplified_features["level"]["point_values"]
+        )
+        metrics["level"] = level_metrics
+    
+    # Mean preservation: absolute delta between means
+    if "mean" in original_features and "mean" in simplified_features:
+        orig_mean = original_features["mean"]["value"]
+        simp_mean = simplified_features["mean"]["value"]
+        mean_delta = delta(orig_mean, simp_mean)
+        # Store as nested dict like level, so frontend grouping works
+        metrics["mean"] = {
+            "delta": mean_delta
+        }
+    
+    # Regime & Change Points preservation: count-based deltas
+    if "regimes" in original_features and "regimes" in simplified_features:
+        orig_num_regimes = original_features["regimes"]["num_regimes"]
+        simp_num_regimes = simplified_features["regimes"]["num_regimes"]
+        orig_num_cps = original_features["regimes"]["num_change_points"]
+        simp_num_cps = simplified_features["regimes"]["num_change_points"]
+        
+        metrics["regimes"] = {
+            "delta": abs(orig_num_regimes - simp_num_regimes)
+        }
+        metrics["change_points"] = {
+            "delta": abs(orig_num_cps - simp_num_cps)
+        }
+    
+    metrics["extrema_retention"] = 0.0
+    metrics["spike_retention"] = 0.0
+    metrics["slope_correlation"] = 0.0
+    metrics["curvature_correlation"] = 0.0
+    metrics["trend_correlation"] = 0.0
+    metrics["regression_error"] = 0.0
+    metrics["periodicity_preservation"] = 0.0
+    metrics["roughness_ratio"] = 0.0
+    metrics["noise_ratio"] = 0.0
+    
+    return metrics

@@ -15,3 +15,4 @@ vega>=3.5.0
 python-multipart>=0.0.5
 uvicorn>=0.15.0
 pae
+ruptures>=1.1.0
