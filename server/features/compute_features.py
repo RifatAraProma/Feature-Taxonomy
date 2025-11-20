@@ -29,7 +29,9 @@ from typing import Dict, List, Tuple, Optional, Any
 import numpy as np
 from scipy import signal, fft
 import scipy.fftpack as scifft
-import ruptures as rpt
+import persim
+
+
 
 
 # ============================================================================
@@ -143,14 +145,80 @@ def compute_extrema(y: np.ndarray) -> Dict[str, Any]:
     
     Returns:
         Dictionary containing:
-        - minima: List of {index, value} for local minima
-        - maxima: List of {index, value} for local maxima
+        - minima: List of {t, y, type} for local minima
+        - maxima: List of {t, y, type} for local maxima
+        - all_extrema: Combined list of all extrema
+        - persistence_diagram: 2D array for topological analysis (birth, death pairs)
     """
-    # TODO: Implement based on extrema.svg
+    from .extrema import find_extrema
+    
+    # Optimized: find_extrema now returns separate lists, avoiding redundant filtering
+    minima, maxima, all_extrema = find_extrema(y)
+    
+    # Create persistence diagram for topological analysis
+    # Format: array of [birth, death] pairs
+    # For extrema: birth = min value, death = max value (or vice versa)
+    persistence_diagram = _create_persistence_diagram_from_extrema(all_extrema, y)
+    
+    # Convert NumPy array to list for JSON serialization
+    if isinstance(persistence_diagram, np.ndarray):
+        persistence_diagram = persistence_diagram.tolist()
+    
     return {
-        "minima": [],
-        "maxima": []
+        "minima": minima,
+        "maxima": maxima,
+        "all_extrema": all_extrema,
+        "persistence_diagram": persistence_diagram
     }
+
+
+def _create_persistence_diagram_from_extrema(extrema: List[Dict], y: np.ndarray) -> np.ndarray:
+    """
+    Convert extrema to persistence diagram format for topological distance computation.
+    
+    Persistence diagrams represent topological features as (birth, death) pairs.
+    For extrema in time series:
+    - Each local maximum corresponds to a topological feature
+    - Birth = value at the saddle point (between min neighbors)
+    - Death = value at the maximum
+    
+    Args:
+        extrema: List of extrema points with 't', 'y', 'type' (already time-ordered)
+        y: Original time series
+        
+    Returns:
+        np.ndarray of shape (n_features, 2) with [birth, death] pairs
+    """
+    if not extrema:
+        return np.array([[0.0, 0.0]], dtype=np.float32)  # Return trivial diagram
+    
+    # Optimized: Extrema are already time-ordered from find_extrema(), no need to sort
+    # Build persistence pairs from extrema
+    pairs = []
+    
+    for i in range(len(extrema) - 1):
+        curr = extrema[i]
+        next_pt = extrema[i + 1]
+        
+        # Create birth-death pair
+        if curr["type"] == "min" and next_pt["type"] == "max":
+            # Birth at minimum, death at maximum
+            pairs.append([curr["y"], next_pt["y"]])
+        elif curr["type"] == "max" and next_pt["type"] == "min":
+            # Birth at minimum, death at maximum (flipped)
+            pairs.append([next_pt["y"], curr["y"]])
+    
+    if not pairs:
+        # If no pairs, use extrema values directly
+        extrema_values = [e["y"] for e in extrema]
+        if len(extrema_values) >= 2:
+            min_val = min(extrema_values)
+            max_val = max(extrema_values)
+            pairs.append([min_val, max_val])
+        else:
+            pairs.append([0.0, 0.0])
+    
+    return np.array(pairs, dtype=np.float32)
 
 
 # ============================================================================
@@ -729,6 +797,13 @@ def compute_selective_features(
         "noise": lambda: compute_noise(y, cfg)
     }
     
+    # Metric-to-feature dependency mapping
+    # Some preservation metrics require specific features to be computed
+    metric_dependencies = {
+        "extrema": "extrema",  # extrema metric needs extrema feature
+        "spike_retention": "spikes_dips"
+    }
+    
     # Compute remaining features (skip already computed spectral features)
     for feature_name in feature_names:
         if feature_name in features:
@@ -740,6 +815,11 @@ def compute_selective_features(
             # change_points is part of regimes
             if "regimes" not in features:
                 features["regimes"] = compute_regimes(y, cfg)
+        elif feature_name in metric_dependencies:
+            # This is a metric name, compute the underlying feature it needs
+            required_feature = metric_dependencies[feature_name]
+            if required_feature not in features and required_feature in feature_map:
+                features[required_feature] = feature_map[required_feature]()
     
     return features
 
@@ -964,6 +1044,65 @@ def _compute_noise_metrics(
     }
 
 
+def _compute_extrema_metrics(
+    original_extrema: Dict[str, Any],
+    simplified_extrema: Dict[str, Any]
+) -> Dict[str, float]:
+    """
+    Compute topological distance metrics for extrema preservation using persistence diagrams.
+    
+    Uses bottleneck and wasserstein distances between persistence diagrams
+    to measure how well extrema (local minima/maxima) are preserved.
+    
+    Bottleneck distance: L∞ metric (worst-case matching distance)
+    Wasserstein distance: L1 metric (average-case matching distance)
+    
+    Args:
+        original_extrema: Extrema from original series with 'persistence_diagram'
+        simplified_extrema: Extrema from simplified series with 'persistence_diagram'
+        
+    Returns:
+        Dictionary with:
+        - bottleneck: L∞ distance between diagrams (worst-case)
+        - wasserstein: L1 distance between diagrams (average-case)
+    """
+    metrics = {}
+    
+
+    orig_pd = original_extrema.get("persistence_diagram")
+    simp_pd = simplified_extrema.get("persistence_diagram")
+    
+    if orig_pd is not None and simp_pd is not None and len(orig_pd) > 0 and len(simp_pd) > 0:
+        try:
+            # Optimized: Only convert if not already correct dtype
+            if not isinstance(orig_pd, np.ndarray) or orig_pd.dtype != np.float32:
+                orig_pd = np.array(orig_pd, dtype=np.float32)
+            if not isinstance(simp_pd, np.ndarray) or simp_pd.dtype != np.float32:
+                simp_pd = np.array(simp_pd, dtype=np.float32)
+            
+            # Bottleneck distance (L∞ metric - worst-case matching)
+            distance_bottleneck = persim.bottleneck(orig_pd, simp_pd)
+            metrics["bottleneck"] = float(distance_bottleneck)
+            
+            # Wasserstein distance (L1 metric - average-case matching)
+            # Note: Default order is 1 (L1 distance)
+            distance_wasserstein = persim.wasserstein(orig_pd, simp_pd)
+            metrics["wasserstein"] = float(distance_wasserstein)
+            
+        except Exception as e:
+            print(f"Warning: Error computing persistence distances: {e}")
+            # Return None on error to indicate computation failed
+            metrics["bottleneck"] = None
+            metrics["wasserstein"] = None
+    else:
+        # Return None when diagrams are empty/missing
+        print(f"Warning: Empty or missing persistence diagrams (orig: {len(orig_pd) if orig_pd is not None else 'None'}, simp: {len(simp_pd) if simp_pd is not None else 'None'})")
+        metrics["bottleneck"] = None
+        metrics["wasserstein"] = None
+            
+    return metrics
+
+
 def compute_feature_preservation_metrics(
     original_features: Dict[str, Any],
     simplified_features: Dict[str, Any]
@@ -979,6 +1118,27 @@ def compute_feature_preservation_metrics(
         Dictionary of preservation metrics for each feature
     """
     metrics = {}
+    
+    # IMPORTANT: Handle length mismatch ONCE at the beginning
+    # If simplified series has different length, interpolate it to match original length
+    # and recompute position-dependent features (slope, curvature, etc.)
+    # This ensures all metrics compare features at the same x-positions.
+    if "level" in original_features and "level" in simplified_features:
+        orig_y = np.array(original_features["level"]["point_values"], dtype=float)
+        simp_y = np.array(simplified_features["level"]["point_values"], dtype=float)
+        
+        if len(simp_y) != len(orig_y):
+            # Interpolate simplified y-values to match original length
+            simp_y_interpolated = _interpolate_to_match_length(simp_y, len(orig_y))
+            
+            # Recompute position-dependent features from interpolated y-values
+            # Slope: derivative assumes uniform x-spacing
+            if "slope" in simplified_features:
+                slope_result = compute_slope(simp_y_interpolated)
+                simplified_features["slope"] = slope_result
+            
+            # Update level feature with interpolated values
+            simplified_features["level"]["point_values"] = simp_y_interpolated.tolist()
     
     # Level metrics (L1 and L∞)
     if "level" in original_features and "level" in simplified_features:
@@ -1013,8 +1173,7 @@ def compute_feature_preservation_metrics(
         }
     
     # Slope preservation: L1 and L∞ of slope series
-    # NOTE: For reducers/aggregators, slope is computed from the ORIGINAL data length
-    # because we need to interpolate the y-values first, THEN compute slope
+    # NOTE: Slope is now recomputed from interpolated y-values if lengths differ (see above)
     if "slope" in original_features and "slope" in simplified_features:
         orig_slope_values = original_features["slope"]["values"]
         simp_slope_values = simplified_features["slope"]["values"]
@@ -1049,7 +1208,17 @@ def compute_feature_preservation_metrics(
             noise_metrics = _compute_noise_metrics(orig_noise, simp_noise)
             metrics["noise"] = noise_metrics
     
-    metrics["extrema_retention"] = 0.0
+    # Extrema preservation: Bottleneck and Wasserstein distances using persistence diagrams
+    if "extrema" in original_features and "extrema" in simplified_features:
+        extrema_metrics = _compute_extrema_metrics(
+            original_features["extrema"],
+            simplified_features["extrema"]
+        )
+        metrics["extrema"] = extrema_metrics
+    else:
+        # If extrema not computed, return None for both metrics
+        metrics["extrema"] = {"bottleneck": None, "wasserstein": None}
+    
     metrics["spike_retention"] = 0.0
     metrics["curvature_correlation"] = 0.0
     metrics["regression_error"] = 0.0

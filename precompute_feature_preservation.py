@@ -24,7 +24,7 @@ Usage:
     If no arguments provided, processes stock_aapl_price with all algorithms and all features
     
 Valid feature names for --features flag:
-    level, mean, extrema_retention, regimes, change_points, spike_retention,
+    level, mean, extrema, regimes, change_points, spike_retention,
     slope, curvature_correlation, trend, noise,
     regression_error, periodicity, roughness_ratio
     
@@ -39,7 +39,7 @@ Examples:
     python precompute_feature_preservation.py stock_aapl_price gaussian_filter --features level,mean
     
     # Process specific features for all algorithms
-    python precompute_feature_preservation.py stock_aapl_price --features level,mean,extrema_retention
+    python precompute_feature_preservation.py stock_aapl_price --features level,mean,extrema
 """
 
 import json
@@ -50,9 +50,10 @@ from pathlib import Path
 from server.features.compute_features import (
     compute_all_features,
     compute_feature_preservation_metrics,
-    FeatureConfig
+    FeatureConfig,
+    compute_selective_features,
+    _interpolate_to_match_length
 )
-from server.features.compute_features import compute_selective_features
 
 
 # Configuration
@@ -63,7 +64,7 @@ NUM_LEVELS = 101  # 0-100
 VALID_FEATURES = [
     'level',
     'mean', 
-    'extrema_retention',
+    'extrema',
     'regimes',
     'change_points',
     'spike_retention',
@@ -74,6 +75,28 @@ VALID_FEATURES = [
     'regression_error',
     'periodicity',  # Changed from periodicity_preservation
     'roughness_ratio'
+]
+
+# Feature categorization for selective interpolation
+# Position-dependent features REQUIRE equal-length data (need interpolation)
+POSITION_DEPENDENT_FEATURES = [
+    'level',       # Point-by-point value comparison
+    'slope',       # Derivative between consecutive points
+    'curvature_correlation',  # Second derivative
+    'trend',       # Low-frequency FFT components
+    'noise'        # High-frequency FFT components
+]
+
+# Position-independent features work with different lengths (NO interpolation)
+POSITION_INDEPENDENT_FEATURES = [
+    'mean',             # Scalar value
+    'extrema',          # Topological count/distribution
+    'regimes',          # Count of regimes/change points
+    'change_points',    # Same as regimes
+    'spike_retention',  # Count-based
+    'periodicity',      # Dominant frequency (scalar)
+    'regression_error', # Slope/intercept (scalars)
+    'roughness_ratio'   # Scalar measure
 ]
 
 
@@ -98,6 +121,37 @@ def extract_y_values(output_data):
             return np.array(output_data)
     
     return np.array(output_data)
+
+
+def split_features_by_dependency(feature_list):
+    """
+    Split feature list into position-dependent and position-independent features.
+    
+    Position-dependent features need equal-length data (require interpolation).
+    Position-independent features work with different lengths (no interpolation).
+    
+    Args:
+        feature_list: List of feature names to split
+        
+    Returns:
+        Tuple of (position_dependent_features, position_independent_features)
+    """
+    if not feature_list:
+        # If no specific features requested, return empty lists
+        # (caller will use compute_all_features instead)
+        return [], []
+    
+    position_dependent = []
+    position_independent = []
+    
+    for feature in feature_list:
+        if feature in POSITION_DEPENDENT_FEATURES:
+            position_dependent.append(feature)
+        elif feature in POSITION_INDEPENDENT_FEATURES:
+            position_independent.append(feature)
+        # If feature not in either list, skip it (will be filtered out)
+    
+    return position_dependent, position_independent
 
 
 def filter_preservation_metrics(all_metrics, feature_list):
@@ -130,7 +184,7 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
         algo_name: Algorithm name (e.g., 'm4_downsample')
         dataset_name: Dataset name (e.g., 'stock_aapl_price')
         feature_list: Optional list of feature names to compute. If None, computes all features.
-                     Valid values: 'level', 'mean', 'extrema_retention', 'regimes', 'change_points',
+                     Valid values: 'level', 'mean', 'extrema', 'regimes', 'change_points',
                                   'spike_retention', 'slope', 'curvature_correlation',
                                   'trend', 'regression_error', 'periodicity',
                                   'roughness_ratio', 'noise'
@@ -198,7 +252,7 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
     perfect_preservation = {
         'level': {'l1': 0.0, 'linf': 0.0},
         'mean': {'delta': 0.0},
-        'extrema_retention': 0.0,
+        'extrema': {'bottleneck': 0.0, 'wasserstein': 0.0},
         'regimes': {'delta': 0.0},
         'change_points': {'delta': 0.0},
         'spike_retention': 0.0,
@@ -246,23 +300,40 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
             # Extract simplified y-values
             y_simplified = extract_y_values(level_data['output'])
             
-            # Compute simplified features (selective update if feature_list provided)
+            # Compute simplified features with selective interpolation
             if feature_list:
-                # Selective computation - only compute requested features
-                # When doing selective computation, we ONLY want the requested features
-                # (We'll merge with existing features later when saving)
-                temp_features = compute_selective_features(y_simplified, feature_list, cfg)
+                # SELECTIVE COMPUTATION with SELECTIVE INTERPOLATION
+                # Split features by whether they need interpolation
+                pd_features, pi_features = split_features_by_dependency(feature_list)
                 
-                # Extract only the requested features (don't include old features!)
                 simplified_features = {}
-                for feature_name in feature_list:
-                    if feature_name in temp_features:
-                        simplified_features[feature_name] = temp_features[feature_name]
-                    elif feature_name == "change_points" and "regimes" in temp_features:
-                        # change_points is part of regimes
-                        simplified_features["regimes"] = temp_features["regimes"]
+                
+                # 1. Compute position-independent features from ORIGINAL simplified data
+                #    (extrema, regimes, etc. should use the actual simplified data)
+                if pi_features:
+                    pi_results = compute_selective_features(y_simplified, pi_features, cfg)
+                    simplified_features.update(pi_results)
+                
+                # 2. Compute position-dependent features from INTERPOLATED data
+                #    (level, slope, trend, noise need same length as original)
+                if pd_features:
+                    # Only interpolate if lengths differ
+                    if len(y_simplified) != len(y_original):
+                        y_interpolated = _interpolate_to_match_length(y_simplified, len(y_original))
+                    else:
+                        y_interpolated = y_simplified
+                    
+                    pd_results = compute_selective_features(y_interpolated, pd_features, cfg)
+                    simplified_features.update(pd_results)
+                
+                # Handle special case: change_points is part of regimes
+                if "change_points" in feature_list and "regimes" in simplified_features:
+                    # Already handled - regimes includes change_points
+                    pass
             else:
-                # Full computation - compute ALL features
+                # FULL COMPUTATION - use existing behavior (no pre-interpolation)
+                # Interpolation will happen inside compute_feature_preservation_metrics()
+                # This preserves backward compatibility
                 simplified_features = compute_all_features(y_simplified, cfg)
             
             # Compute preservation metrics (compares all features)
@@ -554,7 +625,7 @@ def main():
         python precompute_feature_preservation.py stock_aapl_price gaussian_filter --features level,mean
         
         # Compute specific features for all algorithms
-        python precompute_feature_preservation.py stock_aapl_price --features level,mean,extrema_retention
+        python precompute_feature_preservation.py stock_aapl_price --features level,mean,extrema
     """
     # Parse command-line arguments
     dataset_name = DEFAULT_DATASET
