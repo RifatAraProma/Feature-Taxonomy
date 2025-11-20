@@ -67,14 +67,14 @@ VALID_FEATURES = [
     'extrema',
     'regimes',
     'change_points',
-    'spike_retention',
+    'spikes_dips',  # Changed from spike_retention - now uses bottleneck/wasserstein like extrema
     'slope',  # Changed from slope_correlation - now uses L1/Linf metrics
-    'curvature_correlation',
+    'curvature',  # Changed from curvature_correlation - now uses L1/Linf metrics
+    'regression',  # Changed from regression_error - now compares fitted lines with L1/Linf metrics
     'trend',  # Changed from trend_correlation
     'noise',  # Changed from noise_ratio
-    'regression_error',
     'periodicity',  # Changed from periodicity_preservation
-    'roughness_ratio'
+    'roughness'
 ]
 
 # Feature categorization for selective interpolation
@@ -82,21 +82,21 @@ VALID_FEATURES = [
 POSITION_DEPENDENT_FEATURES = [
     'level',       # Point-by-point value comparison
     'slope',       # Derivative between consecutive points
-    'curvature_correlation',  # Second derivative
+    'curvature',   # Second derivative
+    'regression',  # Fitted regression line (array comparison)
     'trend',       # Low-frequency FFT components
-    'noise'        # High-frequency FFT components
+    'noise',       # High-frequency FFT components
+    'roughness'    # Scalar roughness σ(ΔY) - requires uniform sampling
 ]
 
 # Position-independent features work with different lengths (NO interpolation)
 POSITION_INDEPENDENT_FEATURES = [
     'mean',             # Scalar value
-    'extrema',          # Topological count/distribution
+    'extrema',          # Topological persistence diagrams (bottleneck/wasserstein)
     'regimes',          # Count of regimes/change points
     'change_points',    # Same as regimes
-    'spike_retention',  # Count-based
-    'periodicity',      # Dominant frequency (scalar)
-    'regression_error', # Slope/intercept (scalars)
-    'roughness_ratio'   # Scalar measure
+    'spikes_dips'       # Topological persistence diagrams (bottleneck/wasserstein)
+    # NOTE: periodicity, trend, and noise are now position-dependent (computed on interpolated data)
 ]
 
 
@@ -255,14 +255,14 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
         'extrema': {'bottleneck': 0.0, 'wasserstein': 0.0},
         'regimes': {'delta': 0.0},
         'change_points': {'delta': 0.0},
-        'spike_retention': 0.0,
-        'slope': {'l1': 0.0, 'linf': 0.0},  # Changed from slope_correlation
-        'curvature_correlation': 0.0,
-        'trend': {'l1': 0.0, 'linf': 0.0},  # Changed from trend_correlation
-        'noise': {'l1': 0.0, 'linf': 0.0},  # Changed from noise_ratio
-        'regression_error': 0.0,
-        'periodicity': {'amplitude_delta': 0.0, 'num_periods_delta': 0.0},  # Changed from periodicity_preservation
-        'roughness_ratio': 0.0
+        'spikes_dips': {'bottleneck': 0.0, 'wasserstein': 0.0},  # Changed from spike_retention
+        'slope': {'l1': 0.0, 'linf': 0.0},
+        'curvature': {'l1': 0.0, 'linf': 0.0},
+        'regression': {'l1': 0.0, 'linf': 0.0},
+        'trend': {'l1': 0.0, 'linf': 0.0},
+        'noise': {'l1': 0.0, 'linf': 0.0, 'auc_delta': 0.0},  # Added area under curve delta
+        'periodicity': {'amplitude_delta': 0.0, 'num_periods_delta': 0.0},
+        'roughness': {'delta': 0.0}  # Position-dependent: delta of scalar roughness values
     }
     
     # Filter to only requested features if specified

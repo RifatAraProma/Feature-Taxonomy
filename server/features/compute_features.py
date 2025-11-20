@@ -30,7 +30,8 @@ import numpy as np
 from scipy import signal, fft
 import scipy.fftpack as scifft
 import persim
-
+import ruptures as rpt
+from .extrema import find_extrema
 
 
 
@@ -43,8 +44,8 @@ class FeatureConfig:
     """Configuration parameters for feature extraction."""
     
     # Spikes & Dips
-    spike_window: int = 21          # Window size for local outlier detection
-    spike_threshold: float = 3.0     # Standard deviation multiplier
+    spike_threshold: float = 2.0     # Standard deviation multiplier (k value: |y - mean| > k*std)
+                                      # 2.0 captures ~5% most extreme outliers (vs 32% at 1.0)
     
     # Regime & Change Points
     regime_n_bkps: Optional[int] = None     # Number of breakpoints (manual override)
@@ -150,7 +151,7 @@ def compute_extrema(y: np.ndarray) -> Dict[str, Any]:
         - all_extrema: Combined list of all extrema
         - persistence_diagram: 2D array for topological analysis (birth, death pairs)
     """
-    from .extrema import find_extrema
+   
     
     # Optimized: find_extrema now returns separate lists, avoiding redundant filtering
     minima, maxima, all_extrema = find_extrema(y)
@@ -227,17 +228,18 @@ def _create_persistence_diagram_from_extrema(extrema: List[Dict], y: np.ndarray)
 
 def compute_regimes(y: np.ndarray, cfg: "FeatureConfig") -> Dict[str, Any]:
     """
-    Detect regimes using ruptures library with fixed breakpoint strategy.
+    Detect regimes using ruptures library with BIC-based penalty.
     
     - Regimes = intervals with constant mean baseline
     - Change-points = boundaries where the mean shifts
     
-    Uses a simple, fast approach:
-    - Fixed 5 breakpoints for interpretability and speed
-    - Pelt algorithm with minimum segment length of 50 points
+    Uses Pelt algorithm with:
     - L2 cost (mean shift detection)
+    - BIC-based penalty: σ² · log(n) where σ² is variance
+    - Minimum segment length of 20 points (configurable)
     
-    This gives 3-6 major regimes which is visually meaningful.
+    The penalty automatically balances model complexity with data fit,
+    yielding an appropriate number of regimes for the series length.
     
     Reference: web/src/figures/Visual features/regime_change_points.svg
     
@@ -257,13 +259,10 @@ def compute_regimes(y: np.ndarray, cfg: "FeatureConfig") -> Dict[str, Any]:
     n = len(y)
     
     try:
-        # Simple fixed strategy: 5 breakpoints for interpretability
-        # This gives 3-6 major regimes which is visually meaningful
-        n_bkps = cfg.regime_n_bkps if cfg.regime_n_bkps is not None else 5
         min_size = cfg.regime_min_len  # Default 20
         
         # Handle edge cases
-        if n < min_size * 2 or n_bkps <= 0:
+        if n < min_size * 2:
             # Too short for meaningful segmentation
             return {
                 "regimes": [{
@@ -281,18 +280,21 @@ def compute_regimes(y: np.ndarray, cfg: "FeatureConfig") -> Dict[str, Any]:
         # Pelt is O(n) on average, much faster than DP which is O(n²)
         algo = rpt.Pelt(model="l2", min_size=min_size).fit(y)
         
-        # Predict with penalty parameter
-        # Higher penalty = fewer breakpoints
-        # We use n_bkps parameter but ruptures uses penalty
-        # Heuristic: penalty ≈ 3 * variance works well
-        penalty_value = 3 * np.var(y) if np.var(y) > 0 else 1.0
+        # BIC-based penalty: σ² · log(n)
+        # This balances model complexity with data fit
+        variance = np.var(y, ddof=0)
+        penalty_value = variance * np.log(n) if variance > 0 else 1.0
         
         try:
             bkps = algo.predict(pen=penalty_value)
         except Exception:
-            # Fallback: use simpler Dynp with fixed n_bkps
-            algo = rpt.Dynp(model="l2", min_size=min_size).fit(y)
-            bkps = algo.predict(n_bkps=min(n_bkps, (n // min_size) - 1))
+            # Fallback: use manual override if provided, else try default penalty
+            if cfg.regime_n_bkps is not None:
+                algo = rpt.Dynp(model="l2", min_size=min_size).fit(y)
+                bkps = algo.predict(n_bkps=min(cfg.regime_n_bkps, (n // min_size) - 1))
+            else:
+                # Use a more conservative penalty
+                bkps = algo.predict(pen=penalty_value * 2)
         
         # bkps includes the last index (n), remove it
         if bkps and bkps[-1] == n:
@@ -355,20 +357,131 @@ def compute_regimes(y: np.ndarray, cfg: "FeatureConfig") -> Dict[str, Any]:
 
 def compute_spikes_dips(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
     """
-    Detect local outliers (spikes and dips).
+    Detect spikes and dips using a statistically meaningful threshold:
+        spike: y_t > mean + k * std
+        dip:   y_t < mean - k * std
+    
+    Uses global statistics (mean and std of entire series) rather than
+    local windows, making it more robust and reproducible.
+    
+    Also creates a persistence diagram for topological distance metrics
+    (bottleneck and Wasserstein), consistent with extrema feature.
     
     Reference: web/src/figures/Visual features/spikes_dips.svg
+    
+    Args:
+        y: Time series data
+        cfg: Feature configuration (uses spike_threshold for k value)
     
     Returns:
         Dictionary containing:
         - spikes: List of {index, value} for upward outliers
         - dips: List of {index, value} for downward outliers
+        - num_spikes: Count of spike points
+        - num_dips: Count of dip points
+        - spike_indices: Array of spike indices (for metrics)
+        - dip_indices: Array of dip indices (for metrics)
+        - persistence_diagram: 2D array for topological analysis (birth, death pairs)
     """
-    # TODO: Implement based on spikes_dips.svg
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+    
+    if n < 2:
+        return {
+            "spikes": [],
+            "dips": [],
+            "num_spikes": 0,
+            "num_dips": 0,
+            "spike_indices": np.array([], dtype=int),
+            "dip_indices": np.array([], dtype=int),
+            "persistence_diagram": [[0.0, 0.0]]
+        }
+    
+    # Compute global statistics
+    mu = np.mean(y)
+    sigma = np.std(y, ddof=0)  # Population std for consistency
+    
+    # Use spike_threshold from config (default 1.0)
+    k = cfg.spike_threshold
+    
+    # Compute thresholds
+    upper = mu + k * sigma
+    lower = mu - k * sigma
+    
+    # Find spikes and dips
+    spike_indices = np.where(y > upper)[0]
+    dip_indices = np.where(y < lower)[0]
+    
+    # Convert to list of dicts for JSON serialization
+    spikes = [{"index": int(idx), "value": float(y[idx])} for idx in spike_indices]
+    dips = [{"index": int(idx), "value": float(y[idx])} for idx in dip_indices]
+    
+    # Create persistence diagram for topological analysis
+    # For spikes: (birth=threshold, death=value) - how far above threshold
+    # For dips: (birth=value, death=threshold) - how far below threshold
+    persistence_diagram = _create_persistence_diagram_from_spikes_dips(
+        spike_indices, dip_indices, y, upper, lower
+    )
+    
+    # Convert to list for JSON if it's an array
+    if isinstance(persistence_diagram, np.ndarray):
+        persistence_diagram = persistence_diagram.tolist()
+    
     return {
-        "spikes": [],
-        "dips": []
+        "spikes": spikes,
+        "dips": dips,
+        "num_spikes": len(spikes),
+        "num_dips": len(dips),
+        "spike_indices": spike_indices.tolist() if isinstance(spike_indices, np.ndarray) else spike_indices,
+        "dip_indices": dip_indices.tolist() if isinstance(dip_indices, np.ndarray) else dip_indices,
+        "persistence_diagram": persistence_diagram.tolist() if isinstance(persistence_diagram, np.ndarray) else persistence_diagram
     }
+
+
+def _create_persistence_diagram_from_spikes_dips(
+    spike_indices: np.ndarray,
+    dip_indices: np.ndarray,
+    y: np.ndarray,
+    upper_threshold: float,
+    lower_threshold: float
+) -> np.ndarray:
+    """
+    Convert spikes and dips to persistence diagram format.
+    
+    Persistence pairs represent how far each outlier deviates from threshold:
+    - Spike: (birth=upper_threshold, death=value) - height above threshold
+    - Dip: (birth=value, death=lower_threshold) - depth below threshold
+    
+    This allows using bottleneck/Wasserstein distance to measure how well
+    outliers are preserved in their magnitude and distribution.
+    
+    Args:
+        spike_indices: Indices of spike points
+        dip_indices: Indices of dip points
+        y: Original time series
+        upper_threshold: Spike threshold (mean + k*std)
+        lower_threshold: Dip threshold (mean - k*std)
+        
+    Returns:
+        np.ndarray of shape (n_outliers, 2) with [birth, death] pairs
+    """
+    pairs = []
+    
+    # Add spike pairs: (threshold, value)
+    for idx in spike_indices:
+        value = y[idx]
+        pairs.append([upper_threshold, value])
+    
+    # Add dip pairs: (value, threshold)
+    for idx in dip_indices:
+        value = y[idx]
+        pairs.append([value, lower_threshold])
+    
+    if not pairs:
+        # No spikes/dips - return trivial diagram
+        return np.array([[0.0, 0.0]], dtype=np.float32)
+    
+    return np.array(pairs, dtype=np.float32)
 
 
 # ============================================================================
@@ -377,16 +490,18 @@ def compute_spikes_dips(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, Any]:
 
 def compute_slope(y: np.ndarray) -> Dict[str, Any]:
     """
-    Compute first derivative (rate of change) as absolute differences between consecutive points.
+    Compute first derivative (rate of change) as signed differences between consecutive points.
     
-    Slope[i] = |y[i+1] - y[i]| for i in [0, n-2]
+    Slope[i] = y[i+1] - y[i] for i in [0, n-2]
+    
+    Preserves direction: positive = increasing, negative = decreasing.
     
     Reference: web/src/figures/Visual features/slope.svg
     
     Returns:
         Dictionary containing:
-        - values: Array of absolute slope values (length n-1)
-        - mean_slope: Average absolute slope
+        - values: Array of signed slope values (length n-1)
+        - mean_slope: Average slope (preserves sign)
     """
     y = np.asarray(y, dtype=float)
     
@@ -396,8 +511,8 @@ def compute_slope(y: np.ndarray) -> Dict[str, Any]:
             "mean_slope": 0.0
         }
     
-    # Compute absolute differences between consecutive points
-    slope_values = np.abs(np.diff(y))
+    # Compute signed differences between consecutive points
+    slope_values = np.diff(y)
     
     return {
         "values": slope_values.tolist(),
@@ -411,19 +526,70 @@ def compute_slope(y: np.ndarray) -> Dict[str, Any]:
 
 def compute_curvature(y: np.ndarray) -> Dict[str, Any]:
     """
-    Compute second derivative (curvature/bend).
+    Compute curvature (kappa) for all interior points.
+    
+    Uses the formula:
+        kappa = |y''| / (1 + (y')²)^(3/2)
+    
+    where second derivative is approximated by centered differences:
+        y'' ≈ y[i+1] - 2*y[i] + y[i-1]
+    
+    and first derivative by centered differences:
+        y' ≈ (y[i+1] - y[i-1]) / 2
     
     Reference: web/src/figures/Visual features/curvature.svg
     
+    Args:
+        y: Time series data
+        
     Returns:
         Dictionary containing:
-        - values: Array of curvature values
-        - mean_curvature: Average curvature
+        - values: Array of curvature values (NaN at endpoints, kappa for interior points)
+        - mean_curvature: Average curvature (excluding NaNs)
     """
-    # TODO: Implement based on curvature.svg
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+    
+    # Initialize with NaN
+    kappa = np.full(n, np.nan, dtype=float)
+    
+    if n < 3:
+        # Convert NaN to None for valid JSON
+        kappa_list = [None if np.isnan(val) else float(val) for val in kappa]
+        return {
+            "values": kappa_list,
+            "mean_curvature": 0.0
+        }
+    
+    # Compute for interior points only (indices 1 to n-2)
+    y_fwd = y[2:]      # y[i+1]
+    y_mid = y[1:-1]    # y[i]
+    y_bwd = y[:-2]     # y[i-1]
+    
+    # Second derivative (numerator): |y[i+1] - 2*y[i] + y[i-1]|
+    num = np.abs(y_fwd - 2.0 * y_mid + y_bwd)
+    
+    # First derivative for denominator: (y[i+1] - y[i-1]) / 2
+    first_deriv = (y_fwd - y_bwd) / 2.0
+    
+    # Denominator: (1 + (y')²)^(3/2)
+    denom_inner = 1.0 + first_deriv ** 2
+    denom = denom_inner ** 1.5
+    
+    # Compute kappa for interior points
+    kappa_inner = num / denom
+    kappa[1:-1] = kappa_inner
+    
+    # Calculate mean (excluding NaNs)
+    valid_kappa = kappa[~np.isnan(kappa)]
+    mean_curvature = float(np.mean(valid_kappa)) if len(valid_kappa) > 0 else 0.0
+    
+    # Convert to list and replace NaN with None (which becomes null in JSON)
+    kappa_list = [None if np.isnan(val) else float(val) for val in kappa]
+    
     return {
-        "values": [],
-        "mean_curvature": 0.0
+        "values": kappa_list,
+        "mean_curvature": mean_curvature
     }
 
 
@@ -517,7 +683,7 @@ def compute_spectral_features(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, An
             else:
                 max_freq_amplitude = 0.0
             
-            num_periods = float(max_freq_index) if max_freq_index > 0 else 0.0
+            num_periods = 0.5 * float(max_freq_index) if max_freq_index > 0 else 0.0
             
             periodicity_result = {
                 "dominant_frequency_index": int(max_freq_index),
@@ -602,17 +768,52 @@ def compute_regression(y: np.ndarray) -> Dict[str, Any]:
     
     Reference: web/src/figures/Visual features/regression_fit.svg
     
+    Computes: y_t = alpha + beta * t
+    where:
+        beta = sum((t - mean_t) * (y - mean_y)) / sum((t - mean_t)^2)
+        alpha = mean_y - beta * mean_t
+    
     Returns:
         Dictionary containing:
         - slope: Regression slope (beta)
         - intercept: Regression intercept (alpha)
-        - r_squared: Coefficient of determination
+        - fitted: Array of fitted values (alpha + beta * t)
     """
-    # TODO: Implement based on regression_fit.svg
+    n = len(y)
+    if n < 2:
+        return {
+            "slope": 0.0,
+            "intercept": float(y[0]) if n == 1 else 0.0,
+            "fitted": y.tolist() if n == 1 else []
+        }
+    
+    # Create time variable (0-based indexing)
+    t = np.arange(n, dtype=float)
+    
+    # Compute means
+    mean_t = np.mean(t)
+    mean_y = np.mean(y)
+    
+    # Compute slope (beta)
+    numerator = np.sum((t - mean_t) * (y - mean_y))
+    denominator = np.sum((t - mean_t) ** 2)
+    
+    if abs(denominator) < 1e-10:
+        # All t values are the same (shouldn't happen with arange, but safety check)
+        beta = 0.0
+    else:
+        beta = numerator / denominator
+    
+    # Compute intercept (alpha)
+    alpha = mean_y - beta * mean_t
+    
+    # Compute fitted values
+    fitted = alpha + beta * t
+    
     return {
-        "slope": 0.0,
-        "intercept": 0.0,
-        "r_squared": 0.0
+        "slope": float(beta),
+        "intercept": float(alpha),
+        "fitted": fitted.tolist()
     }
 
 
@@ -646,18 +847,34 @@ def compute_periodicity(y: np.ndarray) -> Dict[str, Any]:
 
 def compute_roughness(y: np.ndarray) -> Dict[str, Any]:
     """
-    Measure high-frequency variation (standard deviation of differences).
+    Compute roughness(Y) exactly as defined:
+    
+    For Y = {y_1, ..., y_N},
+    ΔY = {y_{i+1} - y_i : i = 1, ..., N-1},
+    roughness(Y) = σ(ΔY),
+    
+    where σ is the population standard deviation of the first differences.
+    
+    This is a SCALAR feature - the metric is the delta between scalar roughness values.
+    No interpolation needed since we compare scalar values directly.
     
     Reference: web/src/figures/Visual features/roughness.svg
     
     Returns:
         Dictionary containing:
-        - value: Roughness metric
+        - value: Scalar roughness metric σ(ΔY)
     """
-    # TODO: Implement based on roughness.svg
-    return {
-        "value": 0.0
-    }
+    n = len(y)
+    if n < 2:
+        return {"value": float("nan")}
+    
+    # Compute first differences: ΔY = {y_{i+1} - y_i}
+    diffs = np.diff(y)
+    
+    # Roughness = population standard deviation (ddof=0) as per definition
+    roughness_value = float(np.std(diffs, ddof=0))
+    
+    return {"value": roughness_value}
 
 
 # ============================================================================
@@ -874,7 +1091,7 @@ def _compute_level_metrics(
     if len(y_simp) != len(y_orig):
         y_simp = _interpolate_to_match_length(y_simp, len(y_orig))
     
-    l1 = l1_norm(y_orig, y_simp)      # Average error
+    l1 = l1_norm(y_orig, y_simp)  / len(y_orig)    # Average error
     linf = linf_norm(y_orig, y_simp)     # Worst-case error
     
     return {
@@ -916,8 +1133,103 @@ def _compute_slope_metrics(
         slope_simp = _interpolate_to_match_length(slope_simp, len(slope_orig))
     
     # Use existing helper functions for L1 and L∞ norms
-    l1 = l1_norm(slope_orig, slope_simp)
+    l1 = l1_norm(slope_orig, slope_simp) / len(slope_orig)   # Average error
     linf = linf_norm(slope_orig, slope_simp)
+    
+    return {
+        "l1": l1,
+        "linf": linf
+    }
+
+
+def _compute_curvature_metrics(
+    original_curvature_values: List[float],
+    simplified_curvature_values: List[float]
+) -> Dict[str, float]:
+    """
+    Compute L1 and L∞ distance metrics for curvature preservation.
+    
+    Compares the curvature (kappa) values between original and simplified series.
+    Both arrays should have the same length (interpolation done before feature computation).
+    Only compares interior points (endpoints are None/NaN in both).
+    
+    Args:
+        original_curvature_values: Curvature values from original series (may contain None)
+        simplified_curvature_values: Curvature values from simplified series (may contain None)
+        
+    Returns:
+        Dictionary with:
+        - l1: Average absolute error in curvature (excluding None/NaN)
+        - linf: Maximum absolute error in curvature (excluding None/NaN)
+    """
+    # Convert to numpy arrays (None becomes NaN)
+    curv_orig = np.array(original_curvature_values, dtype=float)
+    curv_simp = np.array(simplified_curvature_values, dtype=float)
+    
+    # Handle empty arrays
+    if len(curv_orig) == 0 or len(curv_simp) == 0:
+        return {"l1": 0.0, "linf": 0.0}
+    
+    # Lengths should match (interpolation happens before curvature computation)
+    # But if they don't, interpolate
+    if len(curv_simp) != len(curv_orig):
+        curv_simp = _interpolate_to_match_length(curv_simp, len(curv_orig))
+    
+    # Filter out NaNs (endpoints) - only compare valid interior points
+    # Both arrays should have NaNs at the same positions (first and last)
+    valid_mask = ~(np.isnan(curv_orig) | np.isnan(curv_simp))
+    
+    if not np.any(valid_mask):
+        # No valid points to compare (e.g., series length < 3)
+        return {"l1": 0.0, "linf": 0.0}
+    
+    curv_orig_valid = curv_orig[valid_mask]
+    curv_simp_valid = curv_simp[valid_mask]
+    
+    # Compute L1 and L∞ norms on valid points only
+    l1 = l1_norm(curv_orig_valid, curv_simp_valid) / len(curv_orig_valid)   # Average error
+    linf = linf_norm(curv_orig_valid, curv_simp_valid)
+    
+    return {
+        "l1": l1,
+        "linf": linf
+    }
+
+
+def _compute_regression_metrics(
+    original_fitted: List[float],
+    simplified_fitted: List[float]
+) -> Dict[str, float]:
+    """
+    Compute L1 and L∞ distance metrics for regression preservation.
+    
+    Compares the fitted regression lines between original and simplified series.
+    Both arrays should have the same length (interpolation done before feature computation).
+    
+    Args:
+        original_fitted: Fitted values from original series regression
+        simplified_fitted: Fitted values from simplified series regression
+        
+    Returns:
+        Dictionary with:
+        - l1: Average absolute error in fitted values
+        - linf: Maximum absolute error in fitted values
+    """
+    fitted_orig = np.array(original_fitted, dtype=float)
+    fitted_simp = np.array(simplified_fitted, dtype=float)
+    
+    # Handle empty arrays
+    if len(fitted_orig) == 0 or len(fitted_simp) == 0:
+        return {"l1": 0.0, "linf": 0.0}
+    
+    # Lengths should match (interpolation happens before regression computation)
+    # But if they don't, interpolate
+    if len(fitted_simp) != len(fitted_orig):
+        fitted_simp = _interpolate_to_match_length(fitted_simp, len(fitted_orig))
+    
+    # Compute L1 and L∞ norms
+    l1 = l1_norm(fitted_orig, fitted_simp) / len(fitted_orig)   # Average error
+    linf = linf_norm(fitted_orig, fitted_simp)
     
     return {
         "l1": l1,
@@ -958,7 +1270,7 @@ def _compute_trend_metrics(
         trend_simp = _interpolate_to_match_length(trend_simp, len(trend_orig))
     
     # Use existing helper functions for L1 and L∞ norms
-    l1 = l1_norm(trend_orig, trend_simp)
+    l1 = l1_norm(trend_orig, trend_simp) / len(trend_orig)   # Average error
     linf = linf_norm(trend_orig, trend_simp)
     
     return {
@@ -1002,15 +1314,91 @@ def _compute_periodicity_metrics(
     }
 
 
+def _compute_spikes_dips_metrics(
+    original_spikes_dips: Dict[str, Any],
+    simplified_spikes_dips: Dict[str, Any]
+) -> Dict[str, float]:
+    """
+    Compute topological distance metrics for spikes/dips preservation using persistence diagrams.
+    
+    Uses bottleneck and wasserstein distances between persistence diagrams
+    to measure how well spikes/dips are preserved in both count and magnitude.
+    
+    To avoid performance issues with large diagrams, we limit to the top 200 most
+    significant outliers (by persistence = |death - birth|).
+    
+    Args:
+        original_spikes_dips: Spikes/dips from original series with 'persistence_diagram'
+        simplified_spikes_dips: Spikes/dips from simplified series with 'persistence_diagram'
+        
+    Returns:
+        Dictionary with:
+        - bottleneck: L∞ distance between diagrams (worst-case)
+        - wasserstein: L1 distance between diagrams (average-case)
+    """
+    MAX_POINTS = 200  # Limit for performance - focus on most significant outliers
+    
+    metrics = {}
+    
+    orig_pd = original_spikes_dips.get("persistence_diagram")
+    simp_pd = simplified_spikes_dips.get("persistence_diagram")
+    
+    if orig_pd is not None and simp_pd is not None and len(orig_pd) > 0 and len(simp_pd) > 0:
+        try:
+            # Convert to numpy arrays if needed
+            if not isinstance(orig_pd, np.ndarray) or orig_pd.dtype != np.float32:
+                orig_pd = np.array(orig_pd, dtype=np.float32)
+            if not isinstance(simp_pd, np.ndarray) or simp_pd.dtype != np.float32:
+                simp_pd = np.array(simp_pd, dtype=np.float32)
+            
+            # Sample most significant points if diagrams are too large
+            if len(orig_pd) > MAX_POINTS:
+                # Compute persistence (magnitude of deviation)
+                persistence = np.abs(orig_pd[:, 1] - orig_pd[:, 0])
+                # Get indices of top MAX_POINTS by persistence
+                top_indices = np.argsort(persistence)[-MAX_POINTS:]
+                orig_pd = orig_pd[top_indices]
+            
+            if len(simp_pd) > MAX_POINTS:
+                persistence = np.abs(simp_pd[:, 1] - simp_pd[:, 0])
+                top_indices = np.argsort(persistence)[-MAX_POINTS:]
+                simp_pd = simp_pd[top_indices]
+            
+            # Bottleneck distance (L∞ metric - worst-case matching)
+            distance_bottleneck = persim.bottleneck(orig_pd, simp_pd)
+            metrics["bottleneck"] = float(distance_bottleneck)
+            
+            # Wasserstein distance (L1 metric - average-case matching)
+            distance_wasserstein = persim.wasserstein(orig_pd, simp_pd)
+            metrics["wasserstein"] = float(distance_wasserstein)
+            
+        except Exception as e:
+            print(f"Warning: Error computing spike/dip persistence distances: {e}")
+            # Return None on error to indicate computation failed
+            metrics["bottleneck"] = None
+            metrics["wasserstein"] = None
+    else:
+        # Return None when diagrams are empty/missing
+        print(f"Warning: Empty or missing persistence diagrams for spikes/dips (orig: {len(orig_pd) if orig_pd is not None else 'None'}, simp: {len(simp_pd) if simp_pd is not None else 'None'})")
+        metrics["bottleneck"] = None
+        metrics["wasserstein"] = None
+            
+    return metrics
+
+
 def _compute_noise_metrics(
     original_noise: List[float],
     simplified_noise: List[float]
 ) -> Dict[str, float]:
     """
-    Compute L1 and L∞ distance metrics for noise preservation.
+    Compute L1, L∞, and area-under-curve (AUC) distance metrics for noise preservation.
     
     Compares the noise values (high-frequency FFT components) between
     original and simplified series.
+    
+    Since noise is high-frequency and hard to match point-by-point, we compute:
+    - L1 and L∞ for consistency with other metrics
+    - AUC delta: difference in total noise energy (integral of |noise|)
     
     Handles different-length series by interpolating the shorter one.
     
@@ -1020,27 +1408,35 @@ def _compute_noise_metrics(
         
     Returns:
         Dictionary with:
-        - l1: Average absolute error in noise
-        - linf: Maximum absolute error in noise
+        - l1: Average absolute error in noise (point-wise)
+        - linf: Maximum absolute error in noise (point-wise)
+        - auc_delta: Absolute difference in area under curve (total noise energy)
     """
     noise_orig = np.array(original_noise, dtype=float)
     noise_simp = np.array(simplified_noise, dtype=float)
     
     # Handle empty arrays
     if len(noise_orig) == 0 or len(noise_simp) == 0:
-        return {"l1": 0.0, "linf": 0.0}
+        return {"l1": 0.0, "linf": 0.0, "auc_delta": 0.0}
     
-    # Interpolate if lengths differ
+    # Compute area under curve (AUC) using trapezoidal rule before interpolation
+    # AUC represents total noise energy
+    auc_orig = np.trapz(np.abs(noise_orig))
+    auc_simp = np.trapz(np.abs(noise_simp))
+    auc_delta = abs(auc_orig - auc_simp)
+    
+    # Interpolate if lengths differ (for point-wise metrics)
     if len(noise_simp) != len(noise_orig):
         noise_simp = _interpolate_to_match_length(noise_simp, len(noise_orig))
     
     # Use existing helper functions for L1 and L∞ norms
-    l1 = l1_norm(noise_orig, noise_simp)
+    l1 = l1_norm(noise_orig, noise_simp) / len(noise_orig)   # Average error
     linf = linf_norm(noise_orig, noise_simp)
     
     return {
         "l1": l1,
-        "linf": linf
+        "linf": linf,
+        "auc_delta": auc_delta
     }
 
 
@@ -1132,10 +1528,46 @@ def compute_feature_preservation_metrics(
             simp_y_interpolated = _interpolate_to_match_length(simp_y, len(orig_y))
             
             # Recompute position-dependent features from interpolated y-values
+            
             # Slope: derivative assumes uniform x-spacing
             if "slope" in simplified_features:
                 slope_result = compute_slope(simp_y_interpolated)
                 simplified_features["slope"] = slope_result
+            
+            # Curvature: second derivative, needs equal-length data
+            if "curvature" in simplified_features:
+                curvature_result = compute_curvature(simp_y_interpolated)
+                simplified_features["curvature"] = curvature_result
+            
+            # Regression: fitted values are position-dependent, need recomputation
+            if "regression" in simplified_features:
+                regression_result = compute_regression(simp_y_interpolated)
+                simplified_features["regression"] = regression_result
+            
+            # Spikes/Dips: detection based on global mean/std, needs recomputation on interpolated data
+            if "spikes_dips" in simplified_features:
+                from dataclasses import dataclass
+                # Use same config as original (default spike_threshold)
+                cfg = FeatureConfig()
+                spikes_dips_result = compute_spikes_dips(simp_y_interpolated, cfg)
+                simplified_features["spikes_dips"] = spikes_dips_result
+            
+            # Periodicity: FFT-based, frequency bins depend on series length, needs recomputation
+            # Trend: FFT-based low-frequency component, needs recomputation
+            # Noise: FFT-based high-frequency component, needs recomputation
+            # Compute all three together via spectral features (single FFT)
+            if "periodicity" in simplified_features or "trend" in simplified_features or "noise" in simplified_features:
+                cfg = FeatureConfig()
+                spectral_result = compute_spectral_features(simp_y_interpolated, cfg)
+                
+                if "periodicity" in simplified_features:
+                    simplified_features["periodicity"] = spectral_result["periodicity"]
+                
+                if "trend" in simplified_features:
+                    simplified_features["trend"] = spectral_result["trend"]
+                
+                if "noise" in simplified_features:
+                    simplified_features["noise"] = spectral_result["noise"]
             
             # Update level feature with interpolated values
             simplified_features["level"]["point_values"] = simp_y_interpolated.tolist()
@@ -1182,6 +1614,36 @@ def compute_feature_preservation_metrics(
             slope_metrics = _compute_slope_metrics(orig_slope_values, simp_slope_values)
             metrics["slope"] = slope_metrics
     
+    # Curvature preservation: L1 and L∞ of curvature (kappa) series
+    # NOTE: Curvature is recomputed from interpolated y-values if lengths differ (see above)
+    if "curvature" in original_features and "curvature" in simplified_features:
+        orig_curv_values = original_features["curvature"]["values"]
+        simp_curv_values = simplified_features["curvature"]["values"]
+        
+        if orig_curv_values and simp_curv_values:
+            curvature_metrics = _compute_curvature_metrics(orig_curv_values, simp_curv_values)
+            metrics["curvature"] = curvature_metrics
+    
+    # Regression preservation: L1 and L∞ of fitted regression lines
+    # NOTE: Regression is recomputed from interpolated y-values if lengths differ (see above)
+    if "regression" in original_features and "regression" in simplified_features:
+        orig_fitted = original_features["regression"]["fitted"]
+        simp_fitted = simplified_features["regression"]["fitted"]
+        
+        if orig_fitted and simp_fitted:
+            regression_metrics = _compute_regression_metrics(orig_fitted, simp_fitted)
+            metrics["regression"] = regression_metrics
+    
+    # Roughness preservation: delta between scalar roughness values
+    # Scalar feature - computed directly from original/simplified data without interpolation
+    if "roughness" in original_features and "roughness" in simplified_features:
+        orig_roughness = original_features["roughness"]["value"]
+        simp_roughness = simplified_features["roughness"]["value"]
+        
+        # Delta between roughness values
+        roughness_delta = delta(orig_roughness, simp_roughness)
+        metrics["roughness"] = {"delta": roughness_delta}
+    
     # Trend preservation: L1 and L∞ of trend series
     if "trend" in original_features and "trend" in simplified_features:
         orig_trend = original_features["trend"]["trend"]
@@ -1219,9 +1681,17 @@ def compute_feature_preservation_metrics(
         # If extrema not computed, return None for both metrics
         metrics["extrema"] = {"bottleneck": None, "wasserstein": None}
     
-    metrics["spike_retention"] = 0.0
-    metrics["curvature_correlation"] = 0.0
-    metrics["regression_error"] = 0.0
-    metrics["roughness_ratio"] = 0.0
+    # Spikes/Dips preservation: Bottleneck and Wasserstein distances using persistence diagrams
+    # NOTE: Spikes/dips are recomputed from interpolated y-values if lengths differ (see above)
+    # This is consistent with extrema preservation metric
+    if "spikes_dips" in original_features and "spikes_dips" in simplified_features:
+        spikes_dips_metrics = _compute_spikes_dips_metrics(
+            original_features["spikes_dips"],
+            simplified_features["spikes_dips"]
+        )
+        metrics["spikes_dips"] = spikes_dips_metrics
+    else:
+        # If spikes/dips not computed, return None for both metrics
+        metrics["spikes_dips"] = {"bottleneck": None, "wasserstein": None}
     
     return metrics

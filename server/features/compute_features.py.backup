@@ -1,0 +1,397 @@
+# server/features/compute_features.py
+"""
+Compute visual features for line charts exactly as defined in the paper.
+
+Assumptions & notation (shared):
+- Discrete time series {y_t}_{t=1..n} sampled at equal intervals; index t = 1..n.
+- Finite differences use unit spacing (Δx = 1).
+- FFT uses numpy.fft.rfft/irfft with ideal masks for low/high-pass operations.
+- Optional parameters expose thresholds and window sizes but the math matches the paper.
+
+Features implemented (semantic then math):
+1) Level:
+   - Point level: L_point(t0) = y(t0)
+   - Interval level: L_interval(I) = (1/|I|) sum_{t∈I} y(t)
+2) Mean:
+   - μ = (1/n) ∑_{i=1}^n y_i
+3) Regimes & Change-Points (mean-based, visual plateaus + boundaries):
+   - Partition into contiguous intervals [a_j, b_j], baseline L_j = avg(y_{a_j..b_j})
+   - A change-point at b_j if L_j ≠ L_{j+1}
+   - Here we detect mean shifts via simple binary segmentation with min_len & τ.
+4) Local Extrema:
+   - Max if y_{t-1} < y_t > y_{t+1}; Min if y_{t-1} > y_t < y_{t+1}
+5) Spikes & Dips (local outliers in a centered window):
+   - |y_t − μ_w(t)| > τ
+6) Slope:
+   - m(t) = y_{t+1} − y_t
+7) Curvature (centered differences discretization of differential-geometry form):
+   - κ_t ≈ |y_{t+1} − 2y_t + y_{t-1}| / (1 + ((y_{t+1} − y_{t-1})/2)^2)^{3/2}
+8) Trend (low-frequency component via ideal low-pass in frequency domain):
+   - T̂(t) = InverseFFT( H_LP(f) · FFT(y(t)) ), keep |f| ≤ f_c
+9) Regression Fit (OLS line ŷ_t = α + β t):
+   - β slope (average rate), α intercept
+10) Periodicity (dominant nonzero peak in |FFT(y)|):
+   - f* = arg max_{f≠0} |FFT(y)|, T = 1/f*, A = |FFT(y)| at f*
+11) Roughness:
+   - roughness(Y) = σ(ΔY), where ΔY = {y_{i+1} − y_i}
+12) Noise (high-frequency residual):
+   - y(t) = T(t) + N(t),   N̂(t) = InverseFFT( H_HP(f) · FFT(y(t)) ), keep |f| > f_c
+"""
+
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional, Any
+import json
+import os
+import math
+import numpy as np
+
+
+# ----------------------------
+# Utilities & helpers
+# ----------------------------
+
+@dataclass
+class FeatureConfig:
+    # Spikes / dips
+    spike_window: int = 21          # odd, centered window
+    spike_tau: float = 3.0          # absolute deviation threshold (σ-normalized inside)
+    # Regimes / change-points (mean-shift)
+    cpt_min_len: int = 20           # min segment length
+    cpt_tau: float = 0.5            # mean difference threshold between adjacent segments
+    cpt_max_splits: int = 10        # guard for overly recursive splits
+    # Trend / Noise
+    cutoff_ratio: float = 0.15      # fraction of Nyquist for LP/HP masks (0<ratio<1)
+    # Interval-level: if provided, averages will be returned for each interval
+    intervals: Optional[List[Tuple[int, int]]] = None  # 1-based inclusive indices
+
+
+# Safe odd window
+def _odd(w: int) -> int:
+    w = max(1, int(w))
+    return w if (w % 2 == 1) else (w + 1)
+
+
+def _moving_mean(y: np.ndarray, w: int) -> np.ndarray:
+    w = _odd(w)
+    if len(y) == 0:
+        return y
+    k = np.ones(w, dtype=float) / float(w)
+    return np.convolve(y, k, mode="same")
+
+
+# ----------------------------
+# 1) Level & Mean
+# ----------------------------
+
+def level_point(y: np.ndarray, t0: int) -> float:
+    # t0 is 1-based index
+    if t0 < 1 or t0 > len(y):
+        raise IndexError("t0 out of range (1..n)")
+    return float(y[t0])
+
+
+# def level_interval(y: np.ndarray, a: int, b: int) -> float:
+#     if a < 1 or b < 1 or a > b or b > len(y):
+#         raise IndexError("interval indices out of range or invalid")
+#     seg = y[a - 1:b]
+#     return float(np.mean(seg)) if len(seg) else float("nan")
+
+
+def mean_value(y: np.ndarray) -> float:
+    return float(np.mean(y)) if len(y) else float("nan")
+
+
+# ----------------------------
+# 2) Regimes & Change-Points (mean-shift via simple binary segmentation)
+# ----------------------------
+
+def _find_best_split_mean(y: np.ndarray, a: int, b: int, min_len: int) -> Tuple[Optional[int], float]:
+    """
+    Search for split index s in (a..b) maximizing |mean(left) - mean(right)|.
+    a,b are 0-based inclusive indices. Enforce min_len on both sides.
+    Returns (s, abs_diff); s is the split AFTER index s (left=a..s, right=s+1..b).
+    """
+    n = b - a + 1
+    if n < 2 * min_len:
+        return None, 0.0
+    ys = y[a:b + 1]
+    cumsum = np.cumsum(ys, dtype=float)
+    best_s, best_diff = None, 0.0
+    # s is last index of left segment in overall indexing
+    for s_local in range(min_len - 1, n - min_len):
+        left_mean = cumsum[s_local] / (s_local + 1)
+        right_mean = (cumsum[-1] - cumsum[s_local]) / (n - (s_local + 1))
+        diff = abs(left_mean - right_mean)
+        if diff > best_diff:
+            best_diff = diff
+            best_s = a + s_local
+    return best_s, float(best_diff)
+
+
+def _segment_mean_shift(y: np.ndarray, a: int, b: int, min_len: int, tau: float, max_splits: int, splits: List[int]):
+    if max_splits <= 0:
+        return
+    s, diff = _find_best_split_mean(y, a, b, min_len)
+    if s is None or diff <= tau:
+        return
+    splits.append(s)
+    _segment_mean_shift(y, a, s, min_len, tau, max_splits - 1, splits)
+    _segment_mean_shift(y, s + 1, b, min_len, tau, max_splits - 1, splits)
+
+
+def regimes_and_changepoints(y: np.ndarray, cfg: FeatureConfig) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Returns:
+      regimes: [{a,b,baseline}]   with 1-based inclusive indices
+      changePoints: [{t, fromBaseline, toBaseline}]
+    """
+    n = len(y)
+    if n == 0:
+        return [], []
+    splits: List[int] = []
+    _segment_mean_shift(y, 0, n - 1, cfg.cpt_min_len, cfg.cpt_tau, cfg.cpt_max_splits, splits)
+    splits = sorted(set(splits))
+
+    starts = [0] + [s + 1 for s in splits]
+    ends = splits + [n - 1]
+    regimes = []
+    for a0, b0 in zip(starts, ends):
+        baseline = float(np.mean(y[a0:b0 + 1]))
+        regimes.append({"a": int(a0 + 1), "b": int(b0 + 1), "baseline": baseline})
+
+    change_points = []
+    for j in range(len(regimes) - 1):
+        L_j = regimes[j]["baseline"]
+        L_next = regimes[j + 1]["baseline"]
+        t_boundary = regimes[j]["b"]  # 1-based boundary index = b_j
+        if L_j != L_next:
+            change_points.append({
+                "t": int(t_boundary),
+                "fromBaseline": float(L_j),
+                "toBaseline": float(L_next),
+            })
+    return regimes, change_points
+
+
+# ----------------------------
+# 3) Local Extrema
+# ----------------------------
+
+def local_extrema(y: np.ndarray) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for t in range(1, len(y) - 1):
+        if y[t - 1] < y[t] > y[t + 1]:
+            out.append({"t": t + 1, "y": float(y[t]), "type": "max"})
+        if y[t - 1] > y[t] < y[t + 1]:
+            out.append({"t": t + 1, "y": float(y[t]), "type": "min"})
+    return out
+
+
+# ----------------------------
+# 4) Spikes & Dips (windowed outliers)
+# ----------------------------
+
+def spikes_and_dips(y: np.ndarray, cfg: FeatureConfig) -> List[Dict[str, Any]]:
+    w = _odd(cfg.spike_window)
+    if len(y) < w:
+        return []
+    mu = _moving_mean(y, w)
+    # robust local scale: std of (y - mu) in window via same kernel
+    resid = y - mu
+    sd = np.sqrt(_moving_mean(resid**2, w)) + 1e-12
+    z = resid / sd
+    out = []
+    for t, (yt, zt) in enumerate(zip(y, z), start=1):
+        if abs(zt) > cfg.spike_tau:
+            out.append({"t": t, "y": float(yt), "z": float(zt)})
+    return out
+
+
+# ----------------------------
+# 5) Slope & Curvature
+# ----------------------------
+
+def slope(y: np.ndarray) -> np.ndarray:
+    # m(t) = y_{t+1} - y_t (length n-1, aligned to t=1..n-1)
+    return np.diff(y)
+
+
+def curvature(y: np.ndarray) -> np.ndarray:
+    # κ_t discretization with centered differences (length n-2, aligned to t=2..n-1)
+    if len(y) < 3:
+        return np.array([])
+    yp = y[2:] - 2 * y[1:-1] + y[:-2]
+    yd = (y[2:] - y[:-2]) / 2.0
+    denom = (1.0 + yd**2) ** 1.5
+    kappa = np.abs(yp) / denom
+    return kappa
+
+
+# ----------------------------
+# 6) Trend & Noise via ideal FFT masks
+# ----------------------------
+
+def _lp_hp_masks(n: int, cutoff_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
+    # rfft frequencies ∈ [0, 0.5] in cycles/sample
+    freqs = np.fft.rfftfreq(n, d=1.0)
+    cutoff = cutoff_ratio * (0.5 if len(freqs) else 0.5)
+    lp = (freqs <= cutoff).astype(float)
+    hp = 1.0 - lp
+    return lp, hp
+
+
+def trend_and_noise(y: np.ndarray, cutoff_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
+    n = len(y)
+    if n == 0:
+        return y, y
+    y0 = y - np.mean(y)
+    Y = np.fft.rfft(y0)
+    lp, hp = _lp_hp_masks(n, cutoff_ratio)
+    T = np.fft.irfft(Y * lp, n=n)
+    N = np.fft.irfft(Y * hp, n=n)
+    # add back mean to trend so that y ≈ T + N holds with T centered at μ(y)
+    T = T + float(np.mean(y))
+    return T, N
+
+
+# ----------------------------
+# 7) Regression (OLS line)
+# ----------------------------
+
+def regression_fit(y: np.ndarray) -> Dict[str, float]:
+    n = len(y)
+    if n == 0:
+        return {"alpha": float("nan"), "beta": float("nan")}
+    t = np.arange(1, n + 1, dtype=float)
+    beta, alpha = np.polyfit(t, y, deg=1)  # np.polyfit returns [slope, intercept] for deg=1? (actually [m,b])
+    # Careful: np.polyfit with deg=1 returns [m, b]; here m=beta, b=alpha
+    return {"alpha": float(alpha), "beta": float(beta)}
+
+
+# ----------------------------
+# 8) Periodicity (dominant nonzero frequency)
+# ----------------------------
+
+def periodicity(y: np.ndarray) -> Dict[str, Any]:
+    n = len(y)
+    if n == 0:
+        return {"fStar": 0.0, "A": 0.0, "T": float("inf"), "spectrum": {"freqs": [], "mag": []}}
+    y0 = y - np.mean(y)
+    Y = np.fft.rfft(y0)
+    freqs = np.fft.rfftfreq(n, d=1.0)
+    mag = np.abs(Y)
+    if len(mag) <= 1:
+        fstar = 0.0
+        A = 0.0
+    else:
+        # ignore zero-frequency
+        k = np.argmax(mag[1:]) + 1
+        fstar = float(freqs[k])
+        A = float(mag[k])
+    T = (1.0 / fstar) if fstar > 0 else float("inf")
+    return {"fStar": fstar, "A": A, "T": T, "spectrum": {"freqs": freqs.tolist(), "mag": mag.tolist()}}
+
+
+# ----------------------------
+# 9) Roughness (std of first differences)
+# ----------------------------
+
+def roughness(y: np.ndarray) -> float:
+    dy = np.diff(y)
+    return float(np.std(dy)) if len(dy) else 0.0
+
+
+# ----------------------------
+# 10) Public API
+# ----------------------------
+
+def compute_all_features(
+    y: List[float],
+    cfg: Optional[FeatureConfig] = None,
+    level_points: Optional[List[int]] = None,                  # which t0 to report for point-level
+    level_intervals: Optional[List[Tuple[int, int]]] = None    # explicit intervals for interval-level
+) -> Dict[str, Any]:
+    """
+    Compute all features. Optional level_points/level_intervals let you request
+    specific point-levels and interval-levels. If no intervals are provided but
+    cfg.intervals exists, those are used.
+    """
+    if cfg is None:
+        cfg = FeatureConfig()
+
+    y_arr = np.asarray(y, dtype=float)
+    n = len(y_arr)
+    out: Dict[str, Any] = {}
+
+    # Level (point & interval)
+    level_out: Dict[str, Any] = {}
+    if level_points:
+        level_out["point"] = [{"t": int(t0), "value": level_point(y_arr, int(t0))} for t0 in level_points]
+    if level_intervals is None:
+        level_intervals = cfg.intervals
+    if level_intervals:
+        level_out["interval"] = [
+            {"a": int(a), "b": int(b), "value": level_interval(y_arr, int(a), int(b))}
+            for (a, b) in level_intervals
+        ]
+    if level_out:
+        out["level"] = level_out
+
+    # Mean
+    out["mean"] = {"mu": mean_value(y_arr)}
+
+    # Regimes & Change-Points (mean-based)
+    regs, cpts = regimes_and_changepoints(y_arr, cfg)
+    out["regimes"] = regs
+    out["changePoints"] = cpts
+
+    # Local Extrema
+    out["extrema"] = local_extrema(y_arr)
+
+    # Spikes & Dips
+    out["spikesDips"] = spikes_and_dips(y_arr, cfg)
+
+    # Slope
+    m = slope(y_arr)
+    out["slope"] = {"values": m.tolist(), "index": list(range(1, len(m) + 1))}  # aligned to t=1..n-1
+
+    # Curvature
+    kappa = curvature(y_arr)
+    out["curvature"] = {"values": kappa.tolist(), "index": list(range(2, n))}   # aligned to t=2..n-1
+
+    # Trend & Noise
+    T, N = trend_and_noise(y_arr, cfg.cutoff_ratio)
+    out["trend"] = {"values": T.tolist()}
+    out["noise"] = {"values": N.tolist()}
+
+    # Regression fit (OLS)
+    out["regression"] = regression_fit(y_arr)
+
+    # Periodicity
+    out["periodicity"] = periodicity(y_arr)
+
+    # Roughness
+    out["roughness"] = {"value": roughness(y_arr)}
+
+    return out
+
+
+# ----------------------------
+# 11) CLI for batch processing
+# ----------------------------
+
+def _load_series_from_json(path: str) -> Tuple[str, List[float]]:
+    with open(path, "r", encoding="utf-8") as f:
+        d = json.load(f)
+    sid = d.get("id", os.path.splitext(os.path.basename(path))[0])
+    y = d["y"]
+    return sid, y
+
+
+def _save_json(path: str, obj: Any):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2)
+
+
