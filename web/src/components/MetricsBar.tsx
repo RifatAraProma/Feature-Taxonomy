@@ -57,9 +57,9 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   const VALID_PRESERVATION_METRICS = [
     'level', 'mean', 'regimes', 'change_points',
     'extrema_retention', 'spike_retention',
-    'slope_correlation', 'curvature_correlation',
-    'trend_correlation', 'noise_ratio', 'roughness_ratio',
-    'periodicity_preservation', 'regression_error'
+    'slope', 'curvature_correlation',
+    'trend', 'noise', 'roughness_ratio',
+    'periodicity', 'regression_error'
   ];
   
   const featurePreservation = Object.fromEntries(
@@ -123,7 +123,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
           // else if (key === 'change_points') groups.change_points[fullKey] = subValue;
           else if (lowerKey.includes('extrema')) groups.extrema[fullKey] = subValue;
           else if (lowerKey.includes('spike')) groups.spikes[fullKey] = subValue;
-          else if (lowerKey.includes('slope')) groups.slope[fullKey] = subValue;
+          else if (key === 'slope') groups.slope[fullKey] = subValue;
           else if (lowerKey.includes('curvature')) groups.curvature[fullKey] = subValue;
           else if (lowerKey.includes('trend')) groups.trend[fullKey] = subValue;
           else if (lowerKey.includes('noise')) groups.noise[fullKey] = subValue;
@@ -158,9 +158,12 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   const groupedFeatureMetrics = groupMetricsByFeature();
   
   // Use precomputed global thresholds if available, otherwise calculate from current view
-  const getThresholds = (metricKey: string, featureMetrics: Record<string, any>, metricType: 'error' | 'ratio' | 'correlation') => {
+  const getThresholds = (metricKey: string, featureMetrics: Record<string, any>, metricType: 'error' | 'ratio' | 'correlation', featureName?: string) => {
     // Try to use global scales first - look up by the EXACT metric key
     if (globalScales) {
+      // For nested metrics (like slope.l1, level.l1), construct the full key
+      const fullKey = featureName ? `${featureName}_${metricKey}` : metricKey;
+      
       // Try exact match first
       if (globalScales[metricKey]) {
         const scale = globalScales[metricKey];
@@ -173,8 +176,20 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         };
       }
       
+      // Try full key match (e.g., slope_l1, level_l1)
+      if (globalScales[fullKey]) {
+        const scale = globalScales[fullKey];
+        console.log(`[SCALES] Using global scale for ${fullKey} (from ${featureName}.${metricKey}):`, scale);
+        return {
+          excellent: scale.excellent || scale.good || 0,
+          good: scale.good || scale.fair || 0,
+          fair: scale.fair || scale.poor || 0,
+          poor: scale.poor
+        };
+      }
+      
       // Try case-insensitive match
-      const matchingKey = Object.keys(globalScales).find(k => k.toLowerCase() === metricKey.toLowerCase());
+      const matchingKey = Object.keys(globalScales).find(k => k.toLowerCase() === metricKey.toLowerCase() || k.toLowerCase() === fullKey.toLowerCase());
       if (matchingKey) {
         const scale = globalScales[matchingKey];
         console.log(`[SCALES] Using global scale for ${metricKey} (matched ${matchingKey}):`, scale);
@@ -186,7 +201,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         };
       }
       
-      console.log(`[SCALES] No global scale found for ${metricKey}, falling back to local calculation`);
+      console.log(`[SCALES] No global scale found for ${metricKey} or ${fullKey}, falling back to local calculation`);
     }
     
     // Fallback: calculate from current view (old behavior)
@@ -262,9 +277,9 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   };
   
   // Color coding for metrics with global scales (or dynamic fallback)
-  const getColor = (key: string, value: number, featureMetrics: Record<string, any>) => {
+  const getColor = (key: string, value: number, featureMetrics: Record<string, any>, featureName?: string) => {
     const type = getMetricType(key);
-    const thresholds = getThresholds(key, featureMetrics, type);
+    const thresholds = getThresholds(key, featureMetrics, type, featureName);
     
     if (!thresholds) {
       // Fallback to gray if no thresholds
@@ -294,14 +309,14 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   };
   
   // Get color legend for a feature with global thresholds (or dynamic fallback)
-  const getColorLegend = (featureMetrics: Record<string, any>) => {
+  const getColorLegend = (featureMetrics: Record<string, any>, featureName?: string) => {
     // Determine the primary metric type for this feature
     const keys = Object.keys(featureMetrics);
     if (keys.length === 0) return null;
     
     const primaryKey = keys[0];
     const type = getMetricType(primaryKey);
-    const thresholds = getThresholds(primaryKey, featureMetrics, type);
+    const thresholds = getThresholds(primaryKey, featureMetrics, type, featureName);
     
     if (!thresholds) return null;
     
@@ -424,33 +439,33 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         description: 'Spike Retention Rate - Percentage of outlier spikes/dips that are preserved.',
         formula: 'Retention = |spikes_simp ∩ spikes_orig| / |spikes_orig|'
       },
-      'slope_correlation': {
-        description: 'Slope Correlation - Correlation between first derivatives (rate of change) of both series.',
-        formula: 'ρ = Corr(dy/dt_orig, dy/dt_simp)'
+      'slope': {
+        description: 'Slope Preservation - L1 (average) and L∞ (maximum) distance between consecutive absolute differences (|y[i+1] - y[i]|) of both series. Lower values indicate better preservation of rate-of-change patterns.',
+        formula: 'L1 = mean(|slope_orig - slope_simp|), L∞ = max(|slope_orig - slope_simp|)'
       },
       'curvature_correlation': {
         description: 'Curvature Correlation - Correlation between second derivatives (shape bending) of both series.',
         formula: 'ρ = Corr(d²y/dt²_orig, d²y/dt²_simp)'
       },
-      'trend_correlation': {
-        description: 'Trend Correlation - Correlation between trend components of original and simplified series.',
-        formula: 'ρ = Corr(trend_orig, trend_simp)'
+      'trend': {
+        description: 'Trend Preservation - L1 and L∞ distance between low-frequency trend components.',
+        formula: 'L1 = Σ|trend_orig - trend_simp|, L∞ = max|trend_orig - trend_simp|'
       },
       'regression_error': {
         description: 'Regression Coefficient Error - Difference between linear regression parameters (slope and intercept).',
         formula: 'Error = √((α_orig - α_simp)² + (β_orig - β_simp)²)'
       },
-      'periodicity_preservation': {
-        description: 'Periodicity Preservation - Measures how well the periodic patterns are preserved.',
-        formula: 'Preservation = Corr(FFT_orig, FFT_simp)'
+      'periodicity': {
+        description: 'Periodicity Preservation - Measures amplitude and period differences in periodic patterns.',
+        formula: 'Δ_amplitude = |amp_orig - amp_simp|, Δ_period = |period_orig - period_simp|'
       },
       'roughness_ratio': {
         description: 'Roughness Ratio - Ratio of simplified roughness to original roughness. Measures how much variability is preserved.',
         formula: 'Ratio = roughness(y_simp) / roughness(y_orig)'
       },
-      'noise_ratio': {
-        description: 'Noise Ratio - Ratio of high-frequency noise in simplified vs original series.',
-        formula: 'Ratio = noise(y_simp) / noise(y_orig)'
+      'noise': {
+        description: 'Noise Preservation - L1 and L∞ distance between high-frequency noise components.',
+        formula: 'L1 = Σ|noise_orig - noise_simp|, L∞ = max|noise_orig - noise_simp|'
       }
     };
     
@@ -627,7 +642,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
           
           {/* Grouped Feature Metrics */}
           {Object.entries(groupedFeatureMetrics).map(([featureName, featureMetrics], index) => {
-            const legend = getColorLegend(featureMetrics as Record<string, any>);
+            const legend = getColorLegend(featureMetrics as Record<string, any>, featureName);
             
             return (
             <div key={featureName}>
@@ -683,14 +698,16 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                   {/* Metrics with Legends and Distribution */}
                   {Object.entries(featureMetrics as Record<string, any>).map(([metricKey, metricValue]) => {
                     const type = getMetricType(metricKey);
-                    const legend = getColorLegend({[metricKey]: metricValue});
-                    const thresholds = getThresholds(metricKey, featureMetrics as Record<string, any>, type);
+                    const legend = getColorLegend({[metricKey]: metricValue}, featureName);
+                    const thresholds = getThresholds(metricKey, featureMetrics as Record<string, any>, type, featureName);
                     const explanation = getMetricExplanation(metricKey);
                     
                     if (!legend || !thresholds) return null;
                     
                     // Get scale range for distribution visualization
-                    const scaleInfo = globalScales?.[metricKey] || globalScales?.[Object.keys(globalScales).find(k => k.toLowerCase() === metricKey.toLowerCase()) || ''];
+                    // Try full key first (e.g., slope_l1), then fallback to metricKey
+                    const fullKey = `${featureName}_${metricKey}`;
+                    const scaleInfo = globalScales?.[fullKey] || globalScales?.[metricKey] || globalScales?.[Object.keys(globalScales).find(k => k.toLowerCase() === metricKey.toLowerCase() || k.toLowerCase() === fullKey.toLowerCase()) || ''];
                     const scaleMin = scaleInfo?.min ?? 0;
                     // Use the actual max value to ensure all values can be displayed without overflow
                     const scaleMax = scaleInfo?.max ?? (thresholds.fair * 1.5);
@@ -728,11 +745,11 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                           <div style={{
                             fontSize: 24,
                             fontWeight: 700,
-                            color: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>),
+                            color: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName),
                             padding: '4px 12px',
                             backgroundColor: '#fff',
                             borderRadius: 8,
-                            border: `2px solid ${getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>)}`
+                            border: `2px solid ${getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName)}`
                           }}>
                             {typeof metricValue === 'number' ? metricValue.toFixed(3) : String(metricValue)}
                           </div>
@@ -791,10 +808,10 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                               marginBottom: 12,
                               textTransform: 'uppercase'
                             }}>
-                              Value Distribution (Range-Based)
+                              Sample Distribution (Count-Based)
                             </div>
                             
-                            {/* Value Distribution Bar - Widths proportional to value ranges */}
+                            {/* Value Distribution Bar - Widths proportional to sample counts */}
                             <div style={{
                               position: 'relative',
                               height: 60,
@@ -806,18 +823,27 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                               marginTop: 24
                             }}>
                               {(() => {
-                                // Calculate zone widths as percentages
-                                const excellentWidth = (thresholds.excellent / scaleMax) * 100;
-                                const goodWidth = ((thresholds.good - thresholds.excellent) / scaleMax) * 100;
-                                const fairWidth = ((thresholds.fair - thresholds.good) / scaleMax) * 100;
-                                const poorWidth = ((scaleMax - thresholds.fair) / scaleMax) * 100;
+                                // Get distribution counts from global scales
+                                const fullKey = `${featureName}_${metricKey}`;
+                                const distribution = scaleInfo?.distribution || globalScales?.[fullKey]?.distribution || globalScales?.[metricKey]?.distribution;
+                                
+                                // Calculate zone widths based on sample counts (proportional to data points)
+                                let excellentWidth = 25, goodWidth = 25, fairWidth = 25, poorWidth = 25; // Default equal widths
+                                
+                                if (distribution && distribution.total > 0) {
+                                  const total = distribution.total;
+                                  excellentWidth = (distribution.excellent / total) * 100;
+                                  goodWidth = (distribution.good / total) * 100;
+                                  fairWidth = (distribution.fair / total) * 100;
+                                  poorWidth = (distribution.poor / total) * 100;
+                                }
                                 
                                 // Minimum width threshold for showing labels (in percentage)
-                                const MIN_WIDTH_FOR_LABEL = 8;
+                                const MIN_WIDTH_FOR_LABEL = 5;
                                 
                                 return type === 'error' ? (
                                 <>
-                                  {/* Excellent zone: 0 to p25 */}
+                                  {/* Excellent zone */}
                                   <div style={{
                                     position: 'absolute',
                                     left: 0,
@@ -845,6 +871,20 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                         Excellent
                                       </div>
                                     )}
+                                    {/* Show count inside the box */}
+                                    {distribution && excellentWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#2E7D32'
+                                      }}>
+                                        {distribution.excellent}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -852,7 +892,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                       fontSize: 9,
                                       color: '#666'
                                     }}>
-                                      {scaleMin.toFixed(1)}
+                                      0
                                     </div>
                                     <div style={{
                                       position: 'absolute',
@@ -866,7 +906,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Good zone: p25 to p50 */}
+                                  {/* Good zone */}
                                   <div style={{
                                     position: 'absolute',
                                     left: `${excellentWidth}%`,
@@ -894,6 +934,20 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                         Good
                                       </div>
                                     )}
+                                    {/* Show count inside the box */}
+                                    {distribution && goodWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#66BB6A'
+                                      }}>
+                                        {distribution.good}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -906,7 +960,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Fair zone: p50 to p75 */}
+                                  {/* Fair zone */}
                                   <div style={{
                                     position: 'absolute',
                                     left: `${excellentWidth + goodWidth}%`,
@@ -934,6 +988,20 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                         Fair
                                       </div>
                                     )}
+                                    {/* Show count inside the box */}
+                                    {distribution && fairWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#FFA726'
+                                      }}>
+                                        {distribution.fair}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -946,7 +1014,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Poor zone: p75 to max */}
+                                  {/* Poor zone */}
                                   <div style={{
                                     position: 'absolute',
                                     left: `${excellentWidth + goodWidth + fairWidth}%`,
@@ -973,6 +1041,20 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                         Poor
                                       </div>
                                     )}
+                                    {/* Show count inside the box */}
+                                    {distribution && poorWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#E53935'
+                                      }}>
+                                        {distribution.poor}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -984,66 +1066,116 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Current value indicator - position based on actual value range */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: `${(metricValue / scaleMax) * 100}%`,
-                                    top: 0,
-                                    width: 3,
-                                    height: '100%',
-                                    backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>),
-                                    boxShadow: '0 0 6px rgba(0,0,0,0.4)',
-                                    zIndex: 10
-                                  }} />
-                                  
-                                  {/* Current value label */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: `${(metricValue / scaleMax) * 100}%`,
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>),
-                                    color: '#fff',
-                                    padding: '3px 10px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                    zIndex: 11
-                                  }}>
-                                    {metricValue.toFixed(2)}
-                                  </div>
+                                  {/* Current value indicator - position based on quality zone */}
+                                  {(() => {
+                                    // Calculate position within the appropriate zone
+                                    let zoneLeft = 0;
+                                    let zoneWidth = 0;
+                                    let positionInZone = 0.5; // Default to middle of zone
+                                    
+                                    if (metricValue <= thresholds.excellent) {
+                                      // Excellent zone
+                                      zoneLeft = 0;
+                                      zoneWidth = excellentWidth;
+                                      positionInZone = thresholds.excellent > 0 ? (metricValue / thresholds.excellent) : 0.5;
+                                    } else if (metricValue <= thresholds.good) {
+                                      // Good zone
+                                      zoneLeft = excellentWidth;
+                                      zoneWidth = goodWidth;
+                                      positionInZone = (metricValue - thresholds.excellent) / (thresholds.good - thresholds.excellent);
+                                    } else if (metricValue <= thresholds.fair) {
+                                      // Fair zone
+                                      zoneLeft = excellentWidth + goodWidth;
+                                      zoneWidth = fairWidth;
+                                      positionInZone = (metricValue - thresholds.good) / (thresholds.fair - thresholds.good);
+                                    } else {
+                                      // Poor zone
+                                      zoneLeft = excellentWidth + goodWidth + fairWidth;
+                                      zoneWidth = poorWidth;
+                                      positionInZone = Math.min((metricValue - thresholds.fair) / (scaleMax - thresholds.fair), 1);
+                                    }
+                                    
+                                    const indicatorPosition = zoneLeft + (zoneWidth * positionInZone);
+                                    
+                                    return (
+                                      <>
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${indicatorPosition}%`,
+                                          top: 0,
+                                          width: 3,
+                                          height: '100%',
+                                          backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName),
+                                          boxShadow: '0 0 6px rgba(0,0,0,0.4)',
+                                          zIndex: 10
+                                        }} />
+                                        
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${indicatorPosition}%`,
+                                          top: '50%',
+                                          transform: 'translate(-50%, -50%)',
+                                          backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName),
+                                          color: '#fff',
+                                          padding: '3px 10px',
+                                          borderRadius: 4,
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          whiteSpace: 'nowrap',
+                                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                          zIndex: 11
+                                        }}>
+                                          {metricValue.toFixed(2)}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                 </>
                               ) : type === 'correlation' && thresholds.poor !== undefined ? (
                                 <>
                                   {/* For correlation: reversed order (poor → fair → good → excellent) */}
-                                  {/* Poor zone: 0 to p25 (lowest correlations) */}
+                                  {/* Poor zone (lowest correlations) */}
                                   <div style={{
                                     position: 'absolute',
                                     left: 0,
                                     top: 0,
-                                    width: `${(thresholds.poor / scaleMax) * 100}%`,
+                                    width: `${poorWidth}%`,
                                     height: '100%',
                                     backgroundColor: '#E5393530',
                                     borderRight: '2px solid #E53935'
                                   }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: -20,
-                                      left: '50%',
-                                      transform: 'translateX(-50%)',
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      color: '#E53935',
-                                      backgroundColor: '#fff',
-                                      padding: '2px 6px',
-                                      borderRadius: 3,
-                                      border: '1px solid #E53935',
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      p25
-                                    </div>
+                                    {poorWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: -20,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        color: '#E53935',
+                                        backgroundColor: '#fff',
+                                        padding: '2px 6px',
+                                        borderRadius: 3,
+                                        border: '1px solid #E53935',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        Poor
+                                      </div>
+                                    )}
+                                    {/* Show count inside the box */}
+                                    {distribution && poorWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#E53935'
+                                      }}>
+                                        {distribution.poor}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -1065,32 +1197,48 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Fair zone: p25 to p50 */}
+                                  {/* Fair zone */}
                                   <div style={{
                                     position: 'absolute',
-                                    left: `${(thresholds.poor / scaleMax) * 100}%`,
+                                    left: `${poorWidth}%`,
                                     top: 0,
-                                    width: `${((thresholds.fair - thresholds.poor) / scaleMax) * 100}%`,
+                                    width: `${fairWidth}%`,
                                     height: '100%',
                                     backgroundColor: '#FFA72630',
                                     borderRight: '2px solid #FFA726'
                                   }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: -20,
-                                      left: '50%',
-                                      transform: 'translateX(-50%)',
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      color: '#FFA726',
-                                      backgroundColor: '#fff',
-                                      padding: '2px 6px',
-                                      borderRadius: 3,
-                                      border: '1px solid #FFA726',
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      p50
-                                    </div>
+                                    {fairWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: -20,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        color: '#FFA726',
+                                        backgroundColor: '#fff',
+                                        padding: '2px 6px',
+                                        borderRadius: 3,
+                                        border: '1px solid #FFA726',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        Fair
+                                      </div>
+                                    )}
+                                    {/* Show count inside the box */}
+                                    {distribution && fairWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#FFA726'
+                                      }}>
+                                        {distribution.fair}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -1103,32 +1251,48 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Good zone: p50 to p75 */}
+                                  {/* Good zone */}
                                   <div style={{
                                     position: 'absolute',
-                                    left: `${(thresholds.fair / scaleMax) * 100}%`,
+                                    left: `${poorWidth + fairWidth}%`,
                                     top: 0,
-                                    width: `${((thresholds.good - thresholds.fair) / scaleMax) * 100}%`,
+                                    width: `${goodWidth}%`,
                                     height: '100%',
                                     backgroundColor: '#66BB6A30',
                                     borderRight: '2px solid #66BB6A'
                                   }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: -20,
-                                      left: '50%',
-                                      transform: 'translateX(-50%)',
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      color: '#66BB6A',
-                                      backgroundColor: '#fff',
-                                      padding: '2px 6px',
-                                      borderRadius: 3,
-                                      border: '1px solid #66BB6A',
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      p75
-                                    </div>
+                                    {goodWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: -20,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        color: '#66BB6A',
+                                        backgroundColor: '#fff',
+                                        padding: '2px 6px',
+                                        borderRadius: 3,
+                                        border: '1px solid #66BB6A',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        Good
+                                      </div>
+                                    )}
+                                    {/* Show count inside the box */}
+                                    {distribution && goodWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#66BB6A'
+                                      }}>
+                                        {distribution.good}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -1141,31 +1305,47 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Excellent zone: p75 to max (highest correlations) */}
+                                  {/* Excellent zone (highest correlations) */}
                                   <div style={{
                                     position: 'absolute',
-                                    left: `${(thresholds.good / scaleMax) * 100}%`,
+                                    left: `${poorWidth + fairWidth + goodWidth}%`,
                                     top: 0,
-                                    width: `${((scaleMax - thresholds.good) / scaleMax) * 100}%`,
+                                    width: `${excellentWidth}%`,
                                     height: '100%',
                                     backgroundColor: '#2E7D3230'
                                   }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: -20,
-                                      left: '50%',
-                                      transform: 'translateX(-50%)',
-                                      fontSize: 9,
-                                      fontWeight: 700,
-                                      color: '#2E7D32',
-                                      backgroundColor: '#fff',
-                                      padding: '2px 6px',
-                                      borderRadius: 3,
-                                      border: '1px solid #2E7D32',
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      Excellent
-                                    </div>
+                                    {excellentWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: -20,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        color: '#2E7D32',
+                                        backgroundColor: '#fff',
+                                        padding: '2px 6px',
+                                        borderRadius: 3,
+                                        border: '1px solid #2E7D32',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        Excellent
+                                      </div>
+                                    )}
+                                    {/* Show count inside the box */}
+                                    {distribution && excellentWidth >= MIN_WIDTH_FOR_LABEL && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: '#2E7D32'
+                                      }}>
+                                        {distribution.excellent}
+                                      </div>
+                                    )}
                                     <div style={{
                                       position: 'absolute',
                                       bottom: -32,
@@ -1177,36 +1357,70 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
                                     </div>
                                   </div>
                                   
-                                  {/* Current value indicator - position based on actual value range */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: `${(metricValue / scaleMax) * 100}%`,
-                                    top: 0,
-                                    width: 3,
-                                    height: '100%',
-                                    backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>),
-                                    boxShadow: '0 0 6px rgba(0,0,0,0.4)',
-                                    zIndex: 10
-                                  }} />
-                                  
-                                  {/* Current value label */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: `${(metricValue / scaleMax) * 100}%`,
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>),
-                                    color: '#fff',
-                                    padding: '3px 10px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                    zIndex: 11
-                                  }}>
-                                    {metricValue.toFixed(2)}
-                                  </div>
+                                  {/* Current value indicator - position based on quality zone (correlation) */}
+                                  {(() => {
+                                    // For correlation: reversed zones (poor → fair → good → excellent)
+                                    let zoneLeft = 0;
+                                    let zoneWidth = 0;
+                                    let positionInZone = 0.5; // Default to middle of zone
+                                    
+                                    if (metricValue < thresholds.poor!) {
+                                      // Poor zone (lowest correlations)
+                                      zoneLeft = 0;
+                                      zoneWidth = poorWidth;
+                                      positionInZone = thresholds.poor! > 0 ? (metricValue / thresholds.poor!) : 0.5;
+                                    } else if (metricValue < thresholds.fair) {
+                                      // Fair zone
+                                      zoneLeft = poorWidth;
+                                      zoneWidth = fairWidth;
+                                      positionInZone = (metricValue - thresholds.poor!) / (thresholds.fair - thresholds.poor!);
+                                    } else if (metricValue < thresholds.good) {
+                                      // Good zone
+                                      zoneLeft = poorWidth + fairWidth;
+                                      zoneWidth = goodWidth;
+                                      positionInZone = (metricValue - thresholds.fair) / (thresholds.good - thresholds.fair);
+                                    } else {
+                                      // Excellent zone (highest correlations)
+                                      zoneLeft = poorWidth + fairWidth + goodWidth;
+                                      zoneWidth = excellentWidth;
+                                      positionInZone = Math.min((metricValue - thresholds.good) / (scaleMax - thresholds.good), 1);
+                                    }
+                                    
+                                    const indicatorPosition = zoneLeft + (zoneWidth * positionInZone);
+                                    
+                                    return (
+                                      <>
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${indicatorPosition}%`,
+                                          top: 0,
+                                          width: 3,
+                                          height: '100%',
+                                          backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName),
+                                          boxShadow: '0 0 6px rgba(0,0,0,0.4)',
+                                          zIndex: 10
+                                        }} />
+                                        
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: `${indicatorPosition}%`,
+                                          top: '50%',
+                                          transform: 'translate(-50%, -50%)',
+                                          backgroundColor: getColor(metricKey, metricValue as number, featureMetrics as Record<string, any>, featureName),
+                                          color: '#fff',
+                                          padding: '3px 10px',
+                                          borderRadius: 4,
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          whiteSpace: 'nowrap',
+                                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                          zIndex: 11
+                                        }}>
+                                          {metricValue.toFixed(2)}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                 </>
                               ) : null;
                               })()}

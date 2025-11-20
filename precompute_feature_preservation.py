@@ -25,8 +25,8 @@ Usage:
     
 Valid feature names for --features flag:
     level, mean, extrema_retention, regimes, change_points, spike_retention,
-    slope_correlation, curvature_correlation, trend_correlation, noise_ratio,
-    regression_error, periodicity_preservation, roughness_ratio
+    slope, curvature_correlation, trend, noise,
+    regression_error, periodicity, roughness_ratio
     
 Examples:
     # Process all features for all algorithms (default dataset)
@@ -52,6 +52,7 @@ from server.features.compute_features import (
     compute_feature_preservation_metrics,
     FeatureConfig
 )
+from server.features.compute_features import compute_selective_features
 
 
 # Configuration
@@ -66,12 +67,12 @@ VALID_FEATURES = [
     'regimes',
     'change_points',
     'spike_retention',
-    'slope_correlation',
+    'slope',  # Changed from slope_correlation - now uses L1/Linf metrics
     'curvature_correlation',
-    'trend_correlation',
-    'noise_ratio',
+    'trend',  # Changed from trend_correlation
+    'noise',  # Changed from noise_ratio
     'regression_error',
-    'periodicity_preservation',
+    'periodicity',  # Changed from periodicity_preservation
     'roughness_ratio'
 ]
 
@@ -129,10 +130,10 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
         algo_name: Algorithm name (e.g., 'm4_downsample')
         dataset_name: Dataset name (e.g., 'stock_aapl_price')
         feature_list: Optional list of feature names to compute. If None, computes all features.
-                     Valid values: 'level', 'mean', 'extrema_retention', 'regime_retention', 
-                                  'spike_retention', 'slope_correlation', 'curvature_correlation',
-                                  'trend_correlation', 'regression_error', 'periodicity_preservation',
-                                  'roughness_ratio', 'noise_ratio'
+                     Valid values: 'level', 'mean', 'extrema_retention', 'regimes', 'change_points',
+                                  'spike_retention', 'slope', 'curvature_correlation',
+                                  'trend', 'regression_error', 'periodicity',
+                                  'roughness_ratio', 'noise'
     """
     precomputed_dir = f"precomputed/{dataset_name}"
     
@@ -158,15 +159,36 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
     # Extract original y-values
     y_original = extract_y_values(level_0_data['output'])
     
-    # Compute original features (all 12 features)
+    # Compute original features (all 12 features OR selective update)
     cfg = FeatureConfig()
-    original_features = compute_all_features(y_original, cfg)
     
-    print(f"Original data: {len(y_original)} points")
+    # Check if we're doing selective update
     if feature_list:
-        print(f"Computing specified features: {', '.join(feature_list)}")
+        # Selective computation - only compute requested features
+        print(f"Original data: {len(y_original)} points")
+        print(f"Computing/updating features: {', '.join(feature_list)}")
+        
+        # Load existing features if available, otherwise start with empty dict
+        if 'features' in level_0_data:
+            original_features = level_0_data['features'].copy()
+        else:
+            original_features = {}
+        
+        # Compute ONLY the requested features (optimization!)
+        temp_features = compute_selective_features(y_original, feature_list, cfg)
+        
+        # Update only the requested features
+        for feature_name in feature_list:
+            if feature_name in temp_features:
+                original_features[feature_name] = temp_features[feature_name]
+            elif feature_name == "change_points" and "regimes" in temp_features:
+                # change_points is part of regimes
+                original_features["regimes"] = temp_features["regimes"]
     else:
+        # Full computation - compute ALL features
+        print(f"Original data: {len(y_original)} points")
         print(f"Computing all features for original series...")
+        original_features = compute_all_features(y_original, cfg)
     
     # Update Level 0 file with features and perfect preservation metrics
     level_0_data['features'] = original_features
@@ -180,24 +202,30 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
         'regimes': {'delta': 0.0},
         'change_points': {'delta': 0.0},
         'spike_retention': 0.0,
-        'slope_correlation': 0.0,
+        'slope': {'l1': 0.0, 'linf': 0.0},  # Changed from slope_correlation
         'curvature_correlation': 0.0,
-        'trend_correlation': 0.0,
-        'noise_ratio': 0.0,
+        'trend': {'l1': 0.0, 'linf': 0.0},  # Changed from trend_correlation
+        'noise': {'l1': 0.0, 'linf': 0.0},  # Changed from noise_ratio
         'regression_error': 0.0,
-        'periodicity_preservation': 0.0,
+        'periodicity': {'amplitude_delta': 0.0, 'num_periods_delta': 0.0},  # Changed from periodicity_preservation
         'roughness_ratio': 0.0
     }
     
     # Filter to only requested features if specified
-    level_0_data['feature_preservation'] = filter_preservation_metrics(
+    new_level_0_metrics = filter_preservation_metrics(
         perfect_preservation, 
         feature_list
     )
     
+    # Merge new preservation metrics into existing ones (don't overwrite!)
+    if 'feature_preservation' not in level_0_data:
+        level_0_data['feature_preservation'] = {}
+    
+    level_0_data['feature_preservation'].update(new_level_0_metrics)
+    
     with open(level_0_file, 'w') as f:
         json.dump(level_0_data, f, indent=2)
-    print(f"✓ Updated level 0 with features and perfect preservation metrics")
+    print(f"✓ Updated level 0 with features and preservation metrics (merged)")
     
     # Process levels 1-100
     successful = 0
@@ -218,8 +246,24 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
             # Extract simplified y-values
             y_simplified = extract_y_values(level_data['output'])
             
-            # Compute simplified features (all 12 features)
-            simplified_features = compute_all_features(y_simplified, cfg)
+            # Compute simplified features (selective update if feature_list provided)
+            if feature_list:
+                # Selective computation - only compute requested features
+                # When doing selective computation, we ONLY want the requested features
+                # (We'll merge with existing features later when saving)
+                temp_features = compute_selective_features(y_simplified, feature_list, cfg)
+                
+                # Extract only the requested features (don't include old features!)
+                simplified_features = {}
+                for feature_name in feature_list:
+                    if feature_name in temp_features:
+                        simplified_features[feature_name] = temp_features[feature_name]
+                    elif feature_name == "change_points" and "regimes" in temp_features:
+                        # change_points is part of regimes
+                        simplified_features["regimes"] = temp_features["regimes"]
+            else:
+                # Full computation - compute ALL features
+                simplified_features = compute_all_features(y_simplified, cfg)
             
             # Compute preservation metrics (compares all features)
             all_preservation_metrics = compute_feature_preservation_metrics(
@@ -228,14 +272,24 @@ def compute_features_for_algorithm(algo_name, dataset_name=DEFAULT_DATASET, feat
             )
             
             # Filter to only requested features if specified
-            preservation_metrics = filter_preservation_metrics(
+            new_preservation_metrics = filter_preservation_metrics(
                 all_preservation_metrics,
                 feature_list
             )
             
-            # Update level data
-            level_data['features'] = simplified_features
-            level_data['feature_preservation'] = preservation_metrics
+            # Merge new features into existing ones (selective update!)
+            if 'features' not in level_data:
+                level_data['features'] = {}
+            
+            # Update only the features we computed
+            level_data['features'].update(simplified_features)
+            
+            # Merge new preservation metrics into existing ones (don't overwrite!)
+            if 'feature_preservation' not in level_data:
+                level_data['feature_preservation'] = {}
+            
+            # Update only the metrics we computed
+            level_data['feature_preservation'].update(new_preservation_metrics)
             
             # Save updated file
             with open(level_file, 'w') as f:
