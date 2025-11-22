@@ -185,10 +185,6 @@ def create_level_0(y_data):
     """
     pae_value = get_pae(y_data.tolist())
     
-    # Compute features for original data (will be used for comparison)
-    cfg = FeatureConfig()
-    features = compute_all_features(y_data, cfg)
-    
     output_data = {
         "dataset_name": TEST_DATASET,
         "algorithm": "original",  # Not algorithm-specific
@@ -196,8 +192,7 @@ def create_level_0(y_data):
         "parameter_name": "none",
         "parameter_value": None,
         "pae": float(pae_value),
-        "output": y_data.tolist(),
-        "features": features  # Store features for later comparison
+        "output": y_data.tolist()
     }
     
     return output_data
@@ -464,32 +459,6 @@ def generate_levels(algo_name, y_data):
             
             pae_value = get_pae(y_for_pae)
             
-            # Compute features for simplified data
-            cfg = FeatureConfig()
-            
-            # Extract y-values for feature computation
-            if isinstance(y_smooth, list) and len(y_smooth) > 0 and isinstance(y_smooth[0], tuple):
-                # Reducer/Aggregator: extract y-values from tuples
-                y_values_for_features = np.array([y for x, y in y_smooth])
-            else:
-                # Transformer: already y-values
-                y_values_for_features = np.array(y_smooth) if not isinstance(y_smooth, np.ndarray) else y_smooth
-            
-            simplified_features = compute_all_features(y_values_for_features, cfg)
-            
-            # Compute preservation metrics (comparing with level 0 original features)
-            # We'll load level 0 to get original features
-            level_0_file = f"{PRECOMPUTED_DIR}/{algo_name}_level_0.json"
-            if os.path.exists(level_0_file):
-                with open(level_0_file, 'r') as f:
-                    level_0_data = json.load(f)
-                    original_features = level_0_data.get('features', {})
-                    preservation_metrics = compute_feature_preservation_metrics(original_features, simplified_features)
-            else:
-                # Fallback: compute features from original y_data
-                original_features = compute_all_features(y_data, cfg)
-                preservation_metrics = compute_feature_preservation_metrics(original_features, simplified_features)
-            
             # Save to file
             filename = f"{PRECOMPUTED_DIR}/{algo_name}_level_{level_idx}.json"
             
@@ -513,9 +482,7 @@ def generate_levels(algo_name, y_data):
                 "parameter_name": param_name,
                 "parameter_value": float(param_value) if config['param_type'] == 'float' else int(param_value),
                 "pae": float(pae_value),
-                "output": y_smooth_list,
-                "features": simplified_features,
-                "feature_preservation": preservation_metrics
+                "output": y_smooth_list
             }
             
             with open(filename, 'w') as f:
@@ -597,136 +564,6 @@ def plot_levels(algo_name, levels_data):
     print(f"✓ Saved data to {csv_filename}")
 
 
-def calculate_feature_scales(dataset_name, precomputed_dir):
-    """Calculate global scales for each feature based on all levels of all algorithms.
-    
-    Args:
-        dataset_name: Name of the dataset
-        precomputed_dir: Directory containing precomputed outputs
-        
-    Returns:
-        Dictionary mapping feature names to their scale thresholds
-    """
-    print(f"\n{'=' * 60}")
-    print("Calculating feature preservation scales...")
-    print(f"{'=' * 60}")
-    
-    # Collect all feature preservation values across all algorithms and levels
-    feature_values = {}
-    
-    # Iterate through all precomputed files
-    for filename in os.listdir(precomputed_dir):
-        if not filename.endswith('.json'):
-            continue
-            
-        filepath = os.path.join(precomputed_dir, filename)
-        try:
-            with open(filepath, 'r') as f:
-                data = json.load(f)
-            
-            # Skip level 0 (original data)
-            if data.get('level', -1) == 0:
-                continue
-                
-            feature_preservation = data.get('feature_preservation', {})
-            
-            # Collect values for each metric
-            for feature_name, metrics in feature_preservation.items():
-                if isinstance(metrics, dict):
-                    # Nested metrics (e.g., level: {l1: ..., linf: ...})
-                    for metric_key, metric_value in metrics.items():
-                        if isinstance(metric_value, (int, float)):
-                            full_key = f"{feature_name}_{metric_key}"
-                            if full_key not in feature_values:
-                                feature_values[full_key] = []
-                            feature_values[full_key].append(float(metric_value))
-                elif isinstance(metrics, (int, float)):
-                    # Direct metric value
-                    if feature_name not in feature_values:
-                        feature_values[feature_name] = []
-                    feature_values[feature_name].append(float(metrics))
-                    
-        except Exception as e:
-            print(f"Warning: Could not process {filename}: {e}")
-    
-    # Calculate percentile-based thresholds for each metric
-    feature_scales = {}
-    
-    for metric_name, values in feature_values.items():
-        if len(values) == 0:
-            continue
-        values_sorted = sorted(values)
-        n = len(values_sorted)
-        lower_name = metric_name.lower()
-        # Fix: Use correct max for l1/linf (do not use hardcoded values)
-        if metric_name in ["level_l1", "level_linf"]:
-            # Use actual max from values
-            max_val = max(values_sorted)
-            min_val = min(values_sorted)
-        else:
-            max_val = values_sorted[-1]
-            min_val = values_sorted[0]
-        # Determine metric type
-        metric_type = 'error'  # Default
-        if 'retention' in lower_name or 'correlation' in lower_name or 'similarity' in lower_name:
-            metric_type = 'correlation'
-        elif 'ratio' in lower_name:
-            metric_type = 'ratio'
-        # Calculate percentile thresholds
-        p25 = values_sorted[int(n * 0.25)]
-        p50 = values_sorted[int(n * 0.50)]
-        p75 = values_sorted[int(n * 0.75)]
-        if metric_type == 'error':
-            feature_scales[metric_name] = {
-                'type': 'error',
-                'excellent': p25,
-                'good': p50,
-                'fair': p75,
-                'min': min_val,
-                'max': max_val
-            }
-        elif metric_type == 'ratio':
-            deviations = sorted([abs(v - 1.0) for v in values])
-            dev_25 = deviations[int(len(deviations) * 0.25)]
-            dev_50 = deviations[int(len(deviations) * 0.50)]
-            dev_75 = deviations[int(len(deviations) * 0.75)]
-            feature_scales[metric_name] = {
-                'type': 'ratio',
-                'excellent': dev_25,
-                'good': dev_50,
-                'fair': dev_75,
-                'min': min_val,
-                'max': max_val
-            }
-        else:
-            feature_scales[metric_name] = {
-                'type': 'correlation',
-                'poor': p25,
-                'fair': p50,
-                'good': p75,
-                'min': min_val,
-                'max': max_val
-            }
-        print(f"  {metric_name} ({metric_type}): {len(values)} values, "
-              f"range [{min_val:.4f}, {max_val:.4f}]")
-    
-    # Save scales to JSON file
-    scales_file = os.path.join(precomputed_dir, '_feature_scales.json')
-    scales_data = {
-        'dataset': dataset_name,
-        'total_samples': sum(len(v) for v in feature_values.values()),
-        'scales': feature_scales
-    }
-    
-    with open(scales_file, 'w') as f:
-        json.dump(scales_data, f, indent=2)
-    
-    print(f"\n✓ Saved feature scales to {scales_file}")
-    print(f"✓ Computed scales for {len(feature_scales)} metrics")
-    
-    return feature_scales
-
-
 if __name__ == "__main__":
     # Load data
     y_data = load_dataset(TEST_DATASET_CATEGORY, TEST_DATASET)
@@ -746,11 +583,7 @@ if __name__ == "__main__":
         
         print(f"\n✅ Completed {algo_name}: {len(levels_data)} levels generated and plotted")
     
-    # Calculate and save feature scales based on all algorithms and levels
-    feature_scales = calculate_feature_scales(TEST_DATASET, PRECOMPUTED_DIR)
-    
     print(f"\n{'=' * 60}")
     print("✅ All algorithms complete!")
-    print(f"✅ Feature scales calculated and saved!")
     print(f"{'=' * 60}")
 

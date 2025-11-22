@@ -132,7 +132,59 @@ export default function App(){
       setSmooth(cached.yhat);
       setAspect(cached.banking?.aspect || 1.0);
       setMetrics(cached.metrics);
-      setOverlays(cached.features || {});
+      
+      // Check if features exist in cache
+      const hasCachedFeatures = cached.features && 
+        (Object.keys(cached.features.original || {}).length > 0 || 
+         Object.keys(cached.features.simplified || {}).length > 0);
+      
+      if (hasCachedFeatures) {
+        console.log('[PRECOMPUTED] Using cached features');
+        setOverlays(cached.features);
+      } else if (selectedFeature !== 'none') {
+        // Features not in cache but user wants to see them - fetch from backend
+        console.log('[PRECOMPUTED] Features missing, fetching from backend for overlay');
+        const returnFeatures = [
+          'level', 'mean', 'extrema', 'regimes', 'changePoints', 
+          'spikes', 'spikesDips', 'trend', 'noise', 
+          'slope', 'curvature', 'regression', 
+          'periodicity', 'roughness'
+        ];
+        
+        // Fetch features for BOTH the current level AND level 0 (original)
+        Promise.all([
+          // Current level (simplified)
+          postSmooth({
+            seriesId: dataset,
+            method: method,
+            usePrecomputed: true,
+            sliderLevel: param,
+            returnFeatures: returnFeatures,
+            banking: true,
+            usePAECalibration: usePAECalibration
+          }),
+          // Level 0 (original) - only fetch if not already at level 0
+          param === 0 ? Promise.resolve(null) : postSmooth({
+            seriesId: dataset,
+            method: method,
+            usePrecomputed: true,
+            sliderLevel: 0,
+            returnFeatures: returnFeatures,
+            banking: true,
+            usePAECalibration: usePAECalibration
+          })
+        ]).then(([currentRes, level0Res]) => {
+          setOverlays({
+            original: level0Res ? level0Res.allFeaturesSimp : currentRes.allFeaturesOrig,
+            simplified: currentRes.allFeaturesSimp || {}
+          });
+        }).catch(err => {
+          console.error('Error fetching features:', err);
+        });
+      } else {
+        setOverlays({original: {}, simplified: {}});
+      }
+      
       setPaeValue(cached.pae || null);
       
       // Update parameter info for current level
@@ -168,7 +220,11 @@ export default function App(){
       setSmooth(res.yhat)
       setAspect(res.banking.aspect || 1.0)
       setMetrics(res.metrics)
-      setOverlays(res.features || {})
+      // Backend returns allFeaturesOrig and allFeaturesSimp, not nested in features
+      setOverlays({
+        original: res.allFeaturesOrig || {},
+        simplified: res.allFeaturesSimp || {}
+      })
       setPaeValue(res.pae || null)  // Capture PAE value
     }).catch(err => {
       console.error('Error applying algorithm:', err);

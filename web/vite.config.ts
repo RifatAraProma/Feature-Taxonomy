@@ -7,5 +7,6 @@ export default defineConfig({
                                  '/series': 'http://127.0.0.1:5000',
                                  '/smooth': 'http://127.0.0.1:5000',
                                  '/match_pae': 'http://127.0.0.1:5000',
-                                 '/spectral': 'http://127.0.0.1:5000' } }
+                                 '/spectral': 'http://127.0.0.1:5000',
+                                 '/precomputed': 'http://127.0.0.1:5000' } }
 })

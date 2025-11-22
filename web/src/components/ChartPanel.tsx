@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import embed from 'vega-embed'
 import { lineBase } from '../vega/lineBase'
 import { getAlgorithmColor } from '../constants/algorithmColors'
@@ -6,7 +6,8 @@ import './ChartPanel.css'
 import { 
   overlayExtrema, 
   overlayChangePoints, 
-  overlayRegimes, 
+  overlayRegimes,
+  overlayRegimesAndChangePoints, 
   overlaySpikes,
   overlayTrend,
   overlayNoise,
@@ -31,6 +32,18 @@ type Props = {
 
 export default function ChartPanel({orig, smooth, overlays, aspect, method, selectedFeature}: Props){
   const ref = useRef<HTMLDivElement>(null)
+  const [origFeatures, setOrigFeatures] = useState<any>(null)
+  
+  // Fetch original features (level 0) for overlay comparison - only when needed
+  useEffect(() => {
+    if (selectedFeature !== 'none' && selectedFeature !== 'none') {
+      // For now, use whatever is in overlays.original
+      // TODO: Could fetch level 0 features here if needed
+      setOrigFeatures(overlays?.original || null)
+    } else {
+      setOrigFeatures(null)
+    }
+  }, [selectedFeature, overlays])
   
   useEffect(()=>{
     if(!ref.current) return;
@@ -46,14 +59,14 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
     
     const algorithmColor = getAlgorithmColor(method);
     
-    // Show original in gray background, simplified series on top
+    // Show original in light gray background, simplified series on top in algorithm color
     const layers:any[] = [
       { 
         data: {name:'orig'}, 
         mark: {
           type:'line', 
           color: '#757575',  // Darker gray for original
-          strokeWidth: 1.5,
+          strokeWidth: 3,
           opacity: 0.5
         } 
       },
@@ -62,7 +75,7 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
         mark: {
           type:'line',
           color: algorithmColor,
-          strokeWidth: 2.5,
+          strokeWidth: 3,  // Thicker for better visibility
           opacity: 1.0
         } 
       },
@@ -83,134 +96,205 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
       const origFeatures = overlays.original || {};
       const simpFeatures = overlays.simplified || {};
       
-      console.log('origFeatures:', origFeatures);
-      console.log('simpFeatures:', simpFeatures);
+      console.log('[ChartPanel] selectedFeature:', selectedFeature);
+      console.log('[ChartPanel] origFeatures:', origFeatures);
+      console.log('[ChartPanel] simpFeatures:', simpFeatures);
+      console.log('[ChartPanel] origFeatures.regimes:', origFeatures.regimes);
+      console.log('[ChartPanel] simpFeatures.regimes:', simpFeatures.regimes);
       
       const processFeature = (features: any, color: string, suffix: string) => {
         const dataName = selectedFeature + suffix;
+        const seriesType = suffix === '_orig' ? 'original' : 'simplified';
         
         switch(selectedFeature) {
           case 'level':
-            if (features.level?.interval) {
-              datasets[dataName] = features.level.interval;
-              return overlayLevel(dataName).map((layer: any) => ({
-                ...layer,
-                mark: {...layer.mark, color: color}
+            // Show vertical lines from each y point down to 0
+            const baseData = suffix === '_orig' ? orig : smooth;
+            if (baseData && baseData.length > 0) {
+              datasets[dataName] = baseData.map((d: any) => ({
+                t: d.t,
+                y: d.y,
+                series: seriesType
               }));
+              
+              return overlayLevel(dataName, color, seriesType);
             }
             break;
           case 'mean':
-            if (features.mean?.mu !== undefined) {
-              return overlayMean(features.mean.mu).map((layer: any) => ({
-                ...layer,
-                mark: {...layer.mark, color: color}
-              }));
+            console.log('[ChartPanel] Processing mean feature:', features.mean);
+            if (features.mean?.value !== undefined) {
+              console.log('[ChartPanel] Creating mean overlay with value:', features.mean.value, 'color:', color, 'series:', seriesType);
+              return overlayMean(features.mean.value, color, seriesType);
+            } else {
+              console.log('[ChartPanel] Mean feature missing or no value property');
+              return [];
+            }
+            break;
+          case 'regression':
+            console.log('[ChartPanel] Processing regression feature:', features.regression);
+            if (features.regression?.slope !== undefined && features.regression?.intercept !== undefined && features.regression?.fitted) {
+              console.log('[ChartPanel] Creating regression overlay:', features.regression);
+              return overlayRegression(features.regression, color, seriesType);
+            } else {
+              console.log('[ChartPanel] Regression feature missing or incomplete');
+              return [];
             }
             break;
           case 'extrema':
             if (features.extrema) {
-              datasets[dataName] = features.extrema;
-              return overlayExtrema(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
-              }));
+              console.log('[ChartPanel] Processing extrema feature:', features.extrema);
+              // Combine minima and maxima
+              const extremaPoints = [
+                ...(features.extrema.minima || []),
+                ...(features.extrema.maxima || [])
+              ];
+              if (extremaPoints.length > 0) {
+                datasets[dataName] = extremaPoints.map((e: any) => ({
+                  ...e,
+                  series: seriesType
+                }));
+                console.log('[ChartPanel] Creating extrema overlay with', extremaPoints.length, 'points');
+                return overlayExtrema(dataName, color, seriesType);
+              }
             }
             break;
           case 'changePoints':
-            if (features.changePoints) {
-              datasets[dataName] = features.changePoints;
-              return overlayChangePoints(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
-              }));
+            // Change points are nested inside the regimes feature
+            const cpRegimesData = features.regimes;
+            if (cpRegimesData && cpRegimesData.change_points) {
+              console.log('[ChartPanel] changePoints feature:', cpRegimesData);
+              const cpIndices = cpRegimesData.change_points;
+              if (Array.isArray(cpIndices) && cpIndices.length > 0) {
+                // For vertical rules to work, we need to know the y extent
+                // Get min/max y from the smooth data
+                const yValues = smooth.map(d => d.y);
+                const yMin = Math.min(...yValues);
+                const yMax = Math.max(...yValues);
+                
+                // Convert to format expected by overlay: array of {t, yMin, yMax, series}
+                datasets[dataName] = cpIndices.map((t: number) => ({
+                  t,
+                  yMin: yMin,
+                  yMax: yMax,
+                  series: seriesType
+                }));
+                console.log('[ChartPanel] changePoints data:', datasets[dataName]);
+                // Pass color and seriesType to overlayChangePoints
+                return overlayChangePoints(dataName, color, seriesType);
+              }
             }
             break;
-          case 'regimes':
-            if (features.regimes) {
-              datasets[dataName] = features.regimes.map((r: any) => ({
-                ...r,
-                baselineMin: r.baseline - 0.5,
-                baselineMax: r.baseline + 0.5
-              }));
-              return overlayRegimes(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
-              }));
+          case 'regimesAndChangePoints':
+            // Show change points as simple vertical dashed lines
+            const combinedRegimesData = features.regimes;
+            if (combinedRegimesData && combinedRegimesData.change_points) {
+              console.log('[ChartPanel] regimesAndChangePoints feature:', combinedRegimesData);
+              const cpIndices = combinedRegimesData.change_points;
+              if (Array.isArray(cpIndices) && cpIndices.length > 0) {
+                // For vertical rules to work, we need to know the y extent
+                // Get min/max y from the smooth data
+                const yValues = smooth.map(d => d.y);
+                const yMin = Math.min(...yValues);
+                const yMax = Math.max(...yValues);
+                
+                // Convert to format expected by overlay: array of {t, yMin, yMax, series}
+                datasets[dataName] = cpIndices.map((t: number) => ({
+                  t,
+                  yMin: yMin,
+                  yMax: yMax,
+                  series: seriesType
+                }));
+                console.log('[ChartPanel] regimesAndChangePoints data:', datasets[dataName]);
+                // Pass color and seriesType to overlayChangePoints
+                return overlayChangePoints(dataName, color, seriesType);
+              }
             }
             break;
           case 'spikesDips':
-            if (features.spikesDips) {
-              datasets[dataName] = features.spikesDips;
-              return overlaySpikes(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
+            if (features.spikes_dips) {
+              console.log('[ChartPanel] Processing spikes_dips feature:', features.spikes_dips);
+              // Combine spikes and dips arrays
+              const spikesData = (features.spikes_dips.spikes || []).map((s: any) => ({
+                t: s.index,
+                y: s.value,
+                type: 'spike',
+                series: seriesType
               }));
+              const dipsData = (features.spikes_dips.dips || []).map((d: any) => ({
+                t: d.index,
+                y: d.value,
+                type: 'dip',
+                series: seriesType
+              }));
+              const outliers = [...spikesData, ...dipsData];
+              if (outliers.length > 0) {
+                datasets[dataName] = outliers;
+                console.log('[ChartPanel] Creating spikes/dips overlay with', outliers.length, 'points');
+                return overlaySpikes(dataName, color, seriesType);
+              }
             }
             break;
           case 'trend':
-            if (features.trend?.values) {
-              datasets[dataName] = features.trend.values.map((v: number, i: number) => ({t: i+1, value: v}));
-              return overlayTrend(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
+            console.log('[ChartPanel] Processing trend feature:', features.trend);
+            if (features.trend?.trend) {
+              datasets[dataName] = features.trend.trend.map((v: number, i: number) => ({
+                t: i, 
+                value: v,
+                series: seriesType
               }));
+              console.log('[ChartPanel] Creating trend overlay with', features.trend.trend.length, 'points');
+              return overlayTrend(dataName, color, seriesType);
+            } else {
+              console.log('[ChartPanel] Trend feature missing or no trend array');
+              return [];
             }
             break;
           case 'noise':
+            console.log('[ChartPanel] Processing noise feature:', features.noise);
             if (features.noise?.values) {
-              datasets[dataName] = features.noise.values.map((v: number, i: number) => ({t: i+1, value: v}));
-              return overlayNoise(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
+              datasets[dataName] = features.noise.values.map((v: number, i: number) => ({
+                t: i, 
+                value: v,
+                series: seriesType
               }));
+              console.log('[ChartPanel] Creating noise overlay with', features.noise.values.length, 'points');
+              return overlayNoise(dataName, color, seriesType);
+            } else {
+              console.log('[ChartPanel] Noise feature missing or no values array');
+              return [];
             }
             break;
           case 'slope':
             if (features.slope?.values) {
+              console.log('[ChartPanel] Processing slope feature:', features.slope);
+              // Slope values array has length n-1 (differences between consecutive points)
               datasets[dataName] = features.slope.values.map((v: number, i: number) => ({
-                t: features.slope.index?.[i] || i+1,
-                value: v
+                t: i,
+                value: v,
+                series: seriesType
               }));
-              return overlaySlope(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
-              }));
+              console.log('[ChartPanel] Creating slope overlay with', features.slope.values.length, 'points');
+              return overlaySlope(dataName, color, seriesType);
             }
             break;
           case 'curvature':
             if (features.curvature?.values) {
-              datasets[dataName] = features.curvature.values.map((v: number, i: number) => ({
-                t: features.curvature.index?.[i] || i+2,
-                value: v
-              }));
-              return overlayCurvature(dataName).map((layer: any) => ({
-                ...layer,
-                encoding: {
-                  ...layer.encoding,
-                  color: {value: color}
-                }
-              }));
+              console.log('[ChartPanel] Processing curvature feature:', features.curvature);
+              // Curvature values array has NaN/null at endpoints, valid values for interior points
+              // Filter out null values for cleaner visualization
+              const curvaturePoints = features.curvature.values
+                .map((v: number | null, i: number) => ({
+                  t: i,
+                  value: v,
+                  series: seriesType
+                }))
+                .filter((p: any) => p.value !== null && !isNaN(p.value));
+              
+              if (curvaturePoints.length > 0) {
+                datasets[dataName] = curvaturePoints;
+                console.log('[ChartPanel] Creating curvature overlay with', curvaturePoints.length, 'points');
+                return overlayCurvature(dataName, color, seriesType);
+              }
             }
             break;
           case 'regression':
@@ -225,34 +309,44 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
             }
             break;
           case 'periodicity':
-            if (features.periodicity) {
-              return overlayPeriodicity(features.periodicity.period || 0, features.periodicity.dominant_frequency || 0).map((layer: any) => ({
-                ...layer,
-                mark: {...layer.mark, color: color}
+            console.log('[ChartPanel] Processing periodicity feature:', features.periodicity);
+            if (features.periodicity?.periodic_component) {
+              datasets[dataName] = features.periodicity.periodic_component.map((v: number, i: number) => ({
+                t: i,
+                value: v,
+                series: seriesType,
+                num_periods: features.periodicity.num_periods,
+                amplitude: features.periodicity.amplitude
               }));
+              console.log('[ChartPanel] Creating periodicity overlay with', features.periodicity.periodic_component.length, 'points');
+              return overlayPeriodicity(dataName, color, seriesType);
+            } else {
+              console.log('[ChartPanel] Periodicity feature missing or no periodic_component array');
+              return [];
             }
             break;
           case 'roughness':
             if (features.roughness?.value !== undefined) {
-              return overlayRoughness(features.roughness.value).map((layer: any) => ({
-                ...layer,
-                mark: {...layer.mark, color: color}
-              }));
+              console.log('[ChartPanel] Processing roughness feature:', features.roughness);
+              console.log('[ChartPanel] Creating roughness overlay with value', features.roughness.value);
+              return overlayRoughness(features.roughness.value, color, seriesType);
             }
             break;
         }
         return [];
       };
       
-      // Add original features in blue
-      const origOverlays = processFeature(origFeatures, '#2196F3', '_orig');
+      // Add original features in teal-green (high contrast, doesn't conflict with algorithms)
+      const origOverlays = processFeature(origFeatures, '#1b9e77', '_orig');
       if (origOverlays.length > 0) {
+        console.log('[ChartPanel] Adding', origOverlays.length, 'original feature overlays in teal-green');
         featureOverlays.push(...origOverlays);
       }
       
-      // Add simplified features in orange
-      const simpOverlays = processFeature(simpFeatures, '#FF9800', '_simp');
+      // Add simplified features in burnt orange (high contrast, doesn't conflict with algorithms)
+      const simpOverlays = processFeature(simpFeatures, '#d95f02', '_simp');
       if (simpOverlays.length > 0) {
+        console.log('[ChartPanel] Adding', simpOverlays.length, 'simplified feature overlays in burnt orange');
         featureOverlays.push(...simpOverlays);
       }
     }
@@ -266,6 +360,45 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
     // Add feature overlay layers if available
     if (featureOverlays.length > 0) {
       layers.push(...featureOverlays);
+      
+      // Add legend for feature overlays
+      const legendItems = [
+        {label: 'Original', color: '#1b9e77'},
+        {label: 'Simplified', color: '#d95f02'}
+      ];
+      
+      datasets.legend = legendItems;
+      
+      // Add legend layer (positioned below the chart to avoid overlap)
+      layers.push({
+        data: {name: 'legend'},
+        mark: {
+          type: 'point',
+          filled: true,
+          size: 150,  // Larger size for visibility
+          shape: 'square'  // Square shape
+        },
+        encoding: {
+          color: {
+            field: 'label',
+            type: 'nominal',
+            scale: {
+              domain: legendItems.map(i => i.label),
+              range: legendItems.map(i => i.color)
+            },
+            legend: {
+              title: 'Feature Overlay',
+              orient: 'bottom',
+              direction: 'horizontal',
+              titleFontSize: 14,
+              labelFontSize: 12,
+              symbolSize: 150,  // Match the mark size
+              symbolType: 'square',  // Square symbols in legend
+              offset: 10
+            }
+          }
+        }
+      });
     }
 
     const spec:any = {
@@ -276,7 +409,9 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
     
     console.log('Vega spec:', {
       layerCount: layers.length,
-      datasetKeys: Object.keys(datasets)
+      datasetKeys: Object.keys(datasets),
+      layers: layers,
+      datasets: datasets
     });
     
     embed(ref.current, spec, {

@@ -437,7 +437,7 @@ export default function Controls(p: Props) {
         </div>
         
         {/* PAE Calibration Info */}
-        <div style={{
+        {/* <div style={{
           marginTop: 12,
           padding: 12,
           backgroundColor: '#FFF9C4',
@@ -459,7 +459,7 @@ export default function Controls(p: Props) {
           }}>
             All algorithms at the same level produce visually similar results (matched by Pixel Approximate Entropy for perceptual equivalence).
           </div>
-        </div>
+        </div> */}
       </div>
       
       {/* Feature Overlay Selection */}
@@ -499,8 +499,9 @@ export default function Controls(p: Props) {
           </optgroup>
           <optgroup label="Structural Features">
             <option value="extrema">Local Extrema (Peaks & Valleys)</option>
-            <option value="changePoints">Change Points (Regime Boundaries)</option>
-            <option value="regimes">Regimes (Mean Plateaus)</option>
+            <option value="regimesAndChangePoints">Regimes & Change Points (Combined)</option>
+            {/* <option value="changePoints">Change Points Only (Regime Boundaries)</option>
+            <option value="regimes">Regimes Only (Mean Plateaus)</option> */}
             <option value="spikesDips">Spikes & Dips (Outliers)</option>
           </optgroup>
           <optgroup label="Trend & Pattern">

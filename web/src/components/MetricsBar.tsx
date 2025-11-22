@@ -56,10 +56,10 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   // Filter out any raw feature data that may have leaked in
   const VALID_PRESERVATION_METRICS = [
     'level', 'mean', 'regimes', 'change_points',
-    'extrema_retention', 'spike_retention',
-    'slope', 'curvature_correlation',
-    'trend', 'noise', 'roughness_ratio',
-    'periodicity', 'regression_error'
+    'extrema', 'spikes_dips',
+    'slope', 'curvature',
+    'trend', 'noise', 'roughness',
+    'periodicity', 'regression'
   ];
   
   const featurePreservation = Object.fromEntries(
@@ -120,7 +120,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
           if (lowerKey.includes('level')) groups.level[fullKey] = subValue;
           else if (lowerKey.includes('mean')) groups.mean[fullKey] = subValue;
           else if (key === 'regimes') groups.regimes[fullKey] = subValue;
-          // else if (key === 'change_points') groups.change_points[fullKey] = subValue;
+          else if (key === 'change_points') groups.regimes[fullKey] = subValue; // Merge into regimes group
           else if (lowerKey.includes('extrema')) groups.extrema[fullKey] = subValue;
           else if (lowerKey.includes('spike')) groups.spikes[fullKey] = subValue;
           else if (key === 'slope') groups.slope[fullKey] = subValue;
@@ -136,7 +136,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         if (lowerKey.includes('level')) groups.level[key] = value;
         else if (lowerKey.includes('mean')) groups.mean[key] = value;
         else if (key === 'regimes') groups.regimes[key] = value;
-        else if (key === 'change_points') groups.change_points[key] = value;
+        else if (key === 'change_points') groups.regimes[key] = value; // Merge into regimes group
         else if (lowerKey.includes('extrema')) groups.extrema[key] = value;
         else if (lowerKey.includes('spike')) groups.spikes[key] = value;
         else if (lowerKey.includes('slope')) groups.slope[key] = value;
@@ -169,9 +169,9 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         const scale = globalScales[metricKey];
         console.log(`[SCALES] Using global scale for ${metricKey}:`, scale);
         return {
-          excellent: scale.excellent || scale.good || 0,
-          good: scale.good || scale.fair || 0,
-          fair: scale.fair || scale.poor || 0,
+          excellent: scale.excellent !== undefined ? scale.excellent : (scale.good !== undefined ? scale.good : 0),
+          good: scale.good !== undefined ? scale.good : (scale.fair !== undefined ? scale.fair : 0),
+          fair: scale.fair !== undefined ? scale.fair : (scale.poor !== undefined ? scale.poor : 0),
           poor: scale.poor
         };
       }
@@ -181,9 +181,9 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         const scale = globalScales[fullKey];
         console.log(`[SCALES] Using global scale for ${fullKey} (from ${featureName}.${metricKey}):`, scale);
         return {
-          excellent: scale.excellent || scale.good || 0,
-          good: scale.good || scale.fair || 0,
-          fair: scale.fair || scale.poor || 0,
+          excellent: scale.excellent !== undefined ? scale.excellent : (scale.good !== undefined ? scale.good : 0),
+          good: scale.good !== undefined ? scale.good : (scale.fair !== undefined ? scale.fair : 0),
+          fair: scale.fair !== undefined ? scale.fair : (scale.poor !== undefined ? scale.poor : 0),
           poor: scale.poor
         };
       }
@@ -194,9 +194,9 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         const scale = globalScales[matchingKey];
         console.log(`[SCALES] Using global scale for ${metricKey} (matched ${matchingKey}):`, scale);
         return {
-          excellent: scale.excellent || scale.good || 0,
-          good: scale.good || scale.fair || 0,
-          fair: scale.fair || scale.poor || 0,
+          excellent: scale.excellent !== undefined ? scale.excellent : (scale.good !== undefined ? scale.good : 0),
+          good: scale.good !== undefined ? scale.good : (scale.fair !== undefined ? scale.fair : 0),
+          fair: scale.fair !== undefined ? scale.fair : (scale.poor !== undefined ? scale.poor : 0),
           poor: scale.poor
         };
       }
@@ -264,7 +264,8 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   // Determine metric type and color scale
   const getMetricType = (key: string): 'error' | 'ratio' | 'correlation' => {
     if (key.includes('error') || key === 'L1' || key === 'Linf' || key.includes('Loss') || 
-        key.includes('distance') || key.includes('l1') || key.includes('linf') || key.includes('mae') || key.includes('delta')) {
+        key.includes('distance') || key.includes('l1') || key.includes('linf') || key.includes('mae') || key.includes('delta') ||
+        key.includes('bottleneck') || key.includes('wasserstein')) {
       return 'error';
     }
     if (key.includes('retention') || key.includes('correlation') || key === 'rho' || key.includes('similarity')) {
@@ -330,7 +331,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
       return {
         title: 'Error Scale (Lower is Better) - Global Dataset Scale',
         ranges: [
-          { color: '#2E7D32', label: 'Excellent', range: `≤ ${thresholds.excellent.toFixed(3)}` },
+          { color: '#2E7D32', label: 'Excellent', range: thresholds.excellent === 0 ? `= ${thresholds.excellent.toFixed(3)}` : `≤ ${thresholds.excellent.toFixed(3)}` },
           { color: '#66BB6A', label: 'Good', range: `≤ ${thresholds.good.toFixed(3)}` },
           { color: '#FFA726', label: 'Fair', range: `≤ ${thresholds.fair.toFixed(3)}` },
           { color: '#E53935', label: 'Poor', range: `> ${thresholds.fair.toFixed(3)}` }
@@ -372,6 +373,13 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
     }
     if (key.toLowerCase().includes('linf') || key.toLowerCase() === 'linf') {
       return 'L∞ (Worst Case)';
+    }
+    // Special handling for topological distance metrics
+    if (key.toLowerCase().includes('bottleneck')) {
+      return 'Bottleneck (Worst Case)';
+    }
+    if (key.toLowerCase().includes('wasserstein')) {
+      return 'Wasserstein (Average Case)';
     }
     
     return key
@@ -429,39 +437,61 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         description: 'Change Point Count Delta - Absolute difference in number of detected change points. Lower is better (0 = perfect preservation).',
         formula: 'Delta = |num_changepoints_orig - num_changepoints_simp|'
       },
+      // NOTE: L1 and L∞ displacement metrics commented out due to performance concerns
+      // Uncomment below if backend computation is re-enabled
+      // 'change_points_l1': {
+      //   description: 'Change Points L1 Distance (Average Displacement) - Average positional displacement of change points between original and simplified series. Measures how far change points have shifted on average. Lower is better (0 = no displacement).',
+      //   formula: 'L1 = (1/n) × Σ|pos_orig[i] - pos_simp[i]|'
+      // },
+      // 'change_points_linf': {
+      //   description: 'Change Points L∞ Distance (Maximum Displacement) - Maximum positional displacement of any change point. Captures worst-case drift in change point locations. Lower is better (0 = no displacement).',
+      //   formula: 'L∞ = max|pos_orig[i] - pos_simp[i]|'
+      // },
       
       // Standalone preservation metrics
-      'extrema_retention': {
-        description: 'Extrema Retention Rate - Percentage of local maxima and minima from the original series that are preserved in the simplified version.',
-        formula: 'Retention = |extrema_simp ∩ extrema_orig| / |extrema_orig|'
+      'extrema': {
+        description: 'Extrema Preservation - Topological distances between persistence diagrams of local maxima/minima.',
+        formula: 'Bottleneck (L∞) and Wasserstein (L1) distances'
       },
-      'spike_retention': {
-        description: 'Spike Retention Rate - Percentage of outlier spikes/dips that are preserved.',
-        formula: 'Retention = |spikes_simp ∩ spikes_orig| / |spikes_orig|'
+      'extrema_bottleneck': {
+        description: 'Extrema Bottleneck Distance - L∞ topological distance measuring worst-case matching between persistence diagrams. Quantifies the maximum distortion of extrema patterns. Lower is better (0 = perfect preservation).',
+        formula: 'Bottleneck = max{min{d(p,q) | q ∈ Q}} for p ∈ P'
+      },
+      'extrema_wasserstein': {
+        description: 'Extrema Wasserstein Distance - L1 topological distance measuring average-case matching between persistence diagrams. Quantifies the average distortion of extrema patterns. Lower is better (0 = perfect preservation).',
+        formula: 'Wasserstein = min{Σd(p,q)} over all matchings'
+      },
+      'spikes_dips_bottleneck': {
+        description: 'Spikes/Dips Bottleneck Distance - L∞ topological distance measuring worst-case matching between persistence diagrams of outlier points (y > μ+σ or y < μ-σ). Captures maximum distortion of spike/dip patterns. Lower is better (0 = perfect preservation).',
+        formula: 'Bottleneck = min{max|p-q|} over all matchings'
+      },
+      'spikes_dips_wasserstein': {
+        description: 'Spikes/Dips Wasserstein Distance - L1 topological distance measuring average-case matching between persistence diagrams of outlier points. Quantifies the average distortion of spike/dip patterns. Lower is better (0 = perfect preservation).',
+        formula: 'Wasserstein = min{Σd(p,q)} over all matchings'
       },
       'slope': {
         description: 'Slope Preservation - L1 (average) and L∞ (maximum) distance between consecutive absolute differences (|y[i+1] - y[i]|) of both series. Lower values indicate better preservation of rate-of-change patterns.',
         formula: 'L1 = mean(|slope_orig - slope_simp|), L∞ = max(|slope_orig - slope_simp|)'
       },
-      'curvature_correlation': {
-        description: 'Curvature Correlation - Correlation between second derivatives (shape bending) of both series.',
-        formula: 'ρ = Corr(d²y/dt²_orig, d²y/dt²_simp)'
+      'curvature': {
+        description: 'Curvature Preservation - L1 (average) and L∞ (maximum) distance between curvature values (kappa) of both series. Measures how well the bending/shape is preserved.',
+        formula: 'κ = |y\'\'| / (1 + (y\')²)^(3/2), L1 = mean(|κ_orig - κ_simp|), L∞ = max(|κ_orig - κ_simp|)'
       },
       'trend': {
         description: 'Trend Preservation - L1 and L∞ distance between low-frequency trend components.',
         formula: 'L1 = Σ|trend_orig - trend_simp|, L∞ = max|trend_orig - trend_simp|'
       },
-      'regression_error': {
-        description: 'Regression Coefficient Error - Difference between linear regression parameters (slope and intercept).',
-        formula: 'Error = √((α_orig - α_simp)² + (β_orig - β_simp)²)'
+      'regression': {
+        description: 'Regression Fit Preservation - L1 and L∞ distance between fitted regression lines (y = α + βt).',
+        formula: 'L1 = Σ|fitted_orig - fitted_simp|, L∞ = max|fitted_orig - fitted_simp|'
       },
       'periodicity': {
         description: 'Periodicity Preservation - Measures amplitude and period differences in periodic patterns.',
         formula: 'Δ_amplitude = |amp_orig - amp_simp|, Δ_period = |period_orig - period_simp|'
       },
-      'roughness_ratio': {
-        description: 'Roughness Ratio - Ratio of simplified roughness to original roughness. Measures how much variability is preserved.',
-        formula: 'Ratio = roughness(y_simp) / roughness(y_orig)'
+      'roughness': {
+        description: 'Roughness Preservation - Absolute difference between roughness values. Roughness is the standard deviation of first differences.',
+        formula: 'Δ_roughness = |roughness_orig - roughness_simp|'
       },
       'noise': {
         description: 'Noise Preservation - L1 and L∞ distance between high-frequency noise components.',
@@ -477,7 +507,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   
   return (
     <div style={{
-      marginTop: 24, 
+      marginTop: 74, 
       padding: '20px 24px',
       backgroundColor: '#fff',
       borderRadius: 12,
@@ -490,16 +520,6 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
         paddingBottom: 16,
         borderBottom: '3px solid #FF1493'
       }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: 28,
-          fontWeight: 700,
-          color: '#FF1493',
-          letterSpacing: '0.5px',
-          textAlign: 'center'
-        }}>
-          Feature Preservation Performance
-        </h1>
       </div>
       
       <div style={{

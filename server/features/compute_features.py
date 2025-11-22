@@ -664,7 +664,8 @@ def compute_spectral_features(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, An
             periodicity_result = {
                 "dominant_frequency_index": 0,
                 "amplitude": 0.0,
-                "num_periods": 0.0
+                "num_periods": 0.0,
+                "periodic_component": y.tolist()  # No periodicity for small series
             }
         else:
             # Exclude DC component (first element)
@@ -685,10 +686,22 @@ def compute_spectral_features(y: np.ndarray, cfg: FeatureConfig) -> Dict[str, An
             
             num_periods = 0.5 * float(max_freq_index) if max_freq_index > 0 else 0.0
             
+            # Extract periodic component by keeping only the dominant frequency
+            # This creates a pure sine wave at the dominant frequency
+            fft_periodic = np.zeros_like(fft_y)
+            if max_freq_index > 0 and max_freq_index + 1 < len(fft_y):
+                # Keep the dominant frequency component (and its conjugate for real signal)
+                fft_periodic[max_freq_index + 1] = fft_y[max_freq_index + 1]
+            
+            # Inverse FFT to get periodic component in time domain
+            periodic_values = fft.irfft(fft_periodic, n=n)
+            periodic_values = periodic_values - offset
+            
             periodicity_result = {
                 "dominant_frequency_index": int(max_freq_index),
                 "amplitude": max_freq_amplitude,
-                "num_periods": num_periods
+                "num_periods": num_periods,
+                "periodic_component": periodic_values.tolist()
             }
         
         # ===== STEP 4: Extract NOISE (high frequencies) =====
@@ -1440,6 +1453,72 @@ def _compute_noise_metrics(
     }
 
 
+# NOTE: Change point L1/L∞ metrics computation commented out due to performance concerns
+# Uncomment below if needed in the future
+# def _compute_change_point_metrics(
+#     original_cps: List[int],
+#     simplified_cps: List[int]
+# ) -> Dict[str, Optional[float]]:
+#     """
+#     Compute L1 and L∞ displacement metrics for change point preservation.
+#     
+#     Measures how much change points shift during simplification using greedy matching:
+#     - Each simplified CP is matched to the nearest original CP
+#     - L1: Mean absolute displacement across all matches
+#     - L∞: Maximum displacement (worst-case shift)
+#     
+#     If no change points exist in either series, returns None for both metrics.
+#     If change points exist in one but not the other, uses max position as penalty.
+#     
+#     Args:
+#         original_cps: List of change point indices from original series
+#         simplified_cps: List of change point indices from simplified series
+#         
+#     Returns:
+#         Dictionary with:
+#         - l1: Mean absolute displacement (None if no CPs in both series)
+#         - linf: Maximum absolute displacement (None if no CPs in both series)
+#     """
+#     # Handle edge cases
+#     if len(original_cps) == 0 and len(simplified_cps) == 0:
+#         # No change points in either series - perfect preservation (or no CPs to preserve)
+#         return {"l1": None, "linf": None}
+#     
+#     if len(original_cps) == 0 or len(simplified_cps) == 0:
+#         # Change points exist in one series but not the other
+#         # This is a complete failure - use max position as penalty
+#         max_pos = max(max(original_cps, default=0), max(simplified_cps, default=0))
+#         return {"l1": float(max_pos), "linf": float(max_pos)}
+#     
+#     # Convert to numpy arrays for easier computation
+#     orig_cps = np.array(original_cps, dtype=float)
+#     simp_cps = np.array(simplified_cps, dtype=float)
+#     
+#     # Greedy matching: for each simplified CP, find nearest original CP
+#     # This gives us the displacement of each simplified CP
+#     displacements = []
+#     
+#     for simp_cp in simp_cps:
+#         # Find nearest original CP
+#         distances = np.abs(orig_cps - simp_cp)
+#         min_distance = np.min(distances)
+#         displacements.append(min_distance)
+#     
+#     displacements = np.array(displacements)
+#     
+#     # Use existing L1 and L∞ norm functions
+#     # Create zero array for comparison (displacements are already absolute differences)
+#     zeros = np.zeros_like(displacements)
+#     
+#     l1 = l1_norm(displacements, zeros) / len(displacements)  # Mean displacement
+#     linf = linf_norm(displacements, zeros)  # Max displacement
+#     
+#     return {
+#         "l1": l1,
+#         "linf": linf
+#     }
+
+
 def _compute_extrema_metrics(
     original_extrema: Dict[str, Any],
     simplified_extrema: Dict[str, Any]
@@ -1590,16 +1669,31 @@ def compute_feature_preservation_metrics(
             "delta": mean_delta
         }
     
-    # Regime & Change Points preservation: count-based deltas
+    # Regime & Change Points preservation: count-based deltas + positional displacement
     if "regimes" in original_features and "regimes" in simplified_features:
         orig_num_regimes = original_features["regimes"]["num_regimes"]
         simp_num_regimes = simplified_features["regimes"]["num_regimes"]
         orig_num_cps = original_features["regimes"]["num_change_points"]
         simp_num_cps = simplified_features["regimes"]["num_change_points"]
         
+        # Regime count delta
         metrics["regimes"] = {
             "delta": abs(orig_num_regimes - simp_num_regimes)
         }
+        
+        # Change point position displacement metrics
+        # NOTE: L1 and L∞ computation commented out due to performance concerns
+        # Uncomment below if needed in the future
+        # orig_cps = original_features["regimes"]["change_points"]
+        # simp_cps = simplified_features["regimes"]["change_points"]
+        # cp_metrics = _compute_change_point_metrics(orig_cps, simp_cps)
+        # metrics["change_points"] = {
+        #     "delta": abs(orig_num_cps - simp_num_cps),
+        #     "l1": cp_metrics["l1"],
+        #     "linf": cp_metrics["linf"]
+        # }
+        
+        # Simplified version: only count delta
         metrics["change_points"] = {
             "delta": abs(orig_num_cps - simp_num_cps)
         }
