@@ -150,6 +150,7 @@ ALGORITHMS_CONFIG = {
         'param_direction': 'direct',
         'algorithm_type': 'transformer',
         'use_logscale': True,
+        'extra_params': {'polyorder': 2},  # Fixed polynomial order (from precompute_100_levels)
     },
     'butterworth_filter': {
         'param_name': 'cutoff_freq_normalized',
@@ -158,6 +159,7 @@ ALGORITHMS_CONFIG = {
         'param_direction': 'inverse',  # INVERSE: Lower cutoff = More smoothing = Lower PAE
         'algorithm_type': 'transformer',
         'use_logscale': True,
+        'extra_params': {'order': 2},  # Fixed order parameter (from precompute_100_levels)
     },
     'chebyshev_filter': {
         'param_name': 'cutoff_freq_normalized',
@@ -166,6 +168,7 @@ ALGORITHMS_CONFIG = {
         'param_direction': 'inverse',
         'algorithm_type': 'transformer',
         'use_logscale': True,
+        'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed params (from precompute_100_levels)
     },
     'elliptical_filter': {
         'param_name': 'cutoff_freq_normalized',
@@ -174,6 +177,7 @@ ALGORITHMS_CONFIG = {
         'param_direction': 'inverse',
         'algorithm_type': 'transformer',
         'use_logscale': True,
+        'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params (from precompute_100_levels)
     },
     'fft_cutoff_filter': {
         'param_name': 'cutoff_freq',
@@ -415,14 +419,19 @@ def ensure_odd_window(window_size: int) -> int:
     return window_size
 
 
-def call_algorithm(algo_name: str, data: np.ndarray, param_name: str, param_value) -> List:
+def call_algorithm(algo_name: str, data: np.ndarray, param_name: str, param_value, extra_params: dict = None) -> List:
     """Call the appropriate algorithm with given parameters."""
     # Convert to (x, y) pairs
     pairs = [(i, float(y)) for i, y in enumerate(data)]
     
+    # Build parameter dict
+    params = {param_name: param_value}
+    if extra_params:
+        params.update(extra_params)
+    
     # Try transformer first
     if algo_name in TRANSFORMER_CALLS:
-        result = TRANSFORMER_CALLS[algo_name](pairs, **{param_name: param_value})
+        result = TRANSFORMER_CALLS[algo_name](pairs, **params)
         # Transformers return pairs, extract y values
         if isinstance(result, list) and len(result) > 0 and isinstance(result[0], tuple):
             return [y for x, y in result]
@@ -430,13 +439,13 @@ def call_algorithm(algo_name: str, data: np.ndarray, param_name: str, param_valu
     
     # Try reducer
     elif algo_name in REDUCER_CALLS:
-        result = REDUCER_CALLS[algo_name](pairs, **{param_name: param_value})
+        result = REDUCER_CALLS[algo_name](pairs, **params)
         # Reducers return pairs
         return result
     
     # Try aggregator
     elif algo_name in AGGREGATOR_CALLS:
-        result = AGGREGATOR_CALLS[algo_name](pairs, **{param_name: param_value})
+        result = AGGREGATOR_CALLS[algo_name](pairs, **params)
         # Aggregators return pairs
         return result
     
@@ -637,9 +646,12 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
             if 'window_size' in param_name and config['param_type'] == 'int':
                 param_val = ensure_odd_window(param_val)
             
+            # Get extra_params from config if available
+            extra_params = config.get('extra_params', None)
+            
             try:
                 # Generate smoothed output
-                output = call_algorithm(algo_name, y_data, param_name, param_val)
+                output = call_algorithm(algo_name, y_data, param_name, param_val, extra_params)
                 
                 # Extract y-values (SAME AS precompute_feature_preservation.py)
                 y_simplified = extract_y_values(output)
