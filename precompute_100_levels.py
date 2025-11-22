@@ -13,97 +13,97 @@ TEST_DATASET_CATEGORY = "stock_price"
 TEST_DATASET = "stock_aapl_price"
 
 ALGORITHMS_CONFIG = {
-    # 'fft_cutoff_filter': {
-    #     'param_name': 'cutoff_freq',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length)
-    #     'param_type': 'int',
-    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
-    #     'param_direction': 'inverse',  # Higher cutoff_freq = Less smoothing = Higher PAE
-    # },
-    # 'gaussian_filter': {
-    #     'param_name': 'sigma',
-    #     'param_bounds': None,  # Will be set dynamically based on data length
-    #     'param_type': 'float',
-    #     'param_direction': 'direct',  # Higher sigma = More smoothing = Lower PAE
-    # },
-    # 'butterworth_filter': {
-    #     'param_name': 'cutoff_freq_normalized',
-    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-    #     'param_type': 'float',
-    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
-    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-    #     'extra_params': {'order': 2},  # Fixed order parameter
-    # },
-    # 'chebyshev_filter': {
-    #     'param_name': 'cutoff_freq_normalized',
-    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-    #     'param_type': 'float',
-    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
-    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-    #     'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed order and ripple
-    # },
-    # 'elliptical_filter': {
-    #     'param_name': 'cutoff_freq_normalized',
-    #     'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
-    #     'param_type': 'float',
-    #     'use_logscale': True,  # Use logarithmic scaling for linear PAE
-    #     'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
-    #     'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params
-    # },
-    # 'mean_filter': {
-    #     'param_name': 'window_size',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
-    # },
-    # 'median_filter': {
-    #     'param_name': 'window_size',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
-    # },
-    # 'min_filter': {
-    #     'param_name': 'window_size',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
-    # },
-    # 'max_filter': {
-    #     'param_name': 'window_size',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
-    # },
-    # 'savitzky_golay_filter': {
-    #     'param_name': 'window_size',
-    #     'param_bounds': None,  # Will be set dynamically: (3, data_length // 4)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
-    #     'use_logscale': True,  # Use logarithmic scaling for window sizes
-    #     'extra_params': {'polyorder': 2},  # Fixed polynomial order
-    # },
+    'fft_cutoff_filter': {
+        'param_name': 'cutoff_freq',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length)
+        'param_type': 'int',
+        'use_logscale': True,  # Use logarithmic scaling for linear PAE
+        'param_direction': 'inverse',  # Higher cutoff_freq = Less smoothing = Higher PAE
+    },
+    'gaussian_filter': {
+        'param_name': 'sigma',
+        'param_bounds': None,  # Will be set dynamically based on data length
+        'param_type': 'float',
+        'param_direction': 'direct',  # Higher sigma = More smoothing = Lower PAE
+    },
+    'butterworth_filter': {
+        'param_name': 'cutoff_freq_normalized',
+        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+        'param_type': 'float',
+        'use_logscale': True,  # Use logarithmic scaling for linear PAE
+        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+        'extra_params': {'order': 2},  # Fixed order parameter
+    },
+    'chebyshev_filter': {
+        'param_name': 'cutoff_freq_normalized',
+        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+        'param_type': 'float',
+        'use_logscale': True,  # Use logarithmic scaling for linear PAE
+        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+        'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed order and ripple
+    },
+    'elliptical_filter': {
+        'param_name': 'cutoff_freq_normalized',
+        'param_bounds': (0.01, 0.99),  # Normalized frequency (0 to 1)
+        'param_type': 'float',
+        'use_logscale': True,  # Use logarithmic scaling for linear PAE
+        'param_direction': 'inverse',  # Lower cutoff = More smoothing = Lower PAE
+        'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params
+    },
+    'mean_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'use_logscale': True,  # Use logarithmic scaling for window sizes
+    },
+    'median_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'use_logscale': True,  # Use logarithmic scaling for window sizes
+    },
+    'min_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'use_logscale': True,  # Use logarithmic scaling for window sizes
+    },
+    'max_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'use_logscale': True,  # Use logarithmic scaling for window sizes
+    },
+    'savitzky_golay_filter': {
+        'param_name': 'window_size',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length // 4)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher window_size = More smoothing = Lower PAE
+        'use_logscale': True,  # Use logarithmic scaling for window sizes
+        'extra_params': {'polyorder': 2},  # Fixed polynomial order
+    },
     
     # REDUCER ALGORITHMS - Fixed-Count Downsamplers
-    # 'lttb_downsample': {
-    #     'param_name': 'output_length',
-    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': True,  # Use logarithmic scaling for output_length
-    # },
-    # 'minmaxlttb_downsample': {
-    #     'param_name': 'output_length',
-    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': True,  # Use logarithmic scaling for output_length
-    # },
+    'lttb_downsample': {
+        'param_name': 'output_length',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': True,  # Use logarithmic scaling for output_length
+    },
+    'minmaxlttb_downsample': {
+        'param_name': 'output_length',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': True,  # Use logarithmic scaling for output_length
+    },
     'm4_downsample': {
         'param_name': 'output_length',
         'param_bounds': None,  # Will be set dynamically: (8, data_length - 1), must be multiple of 4
@@ -114,56 +114,56 @@ ALGORITHMS_CONFIG = {
         'minimum_value': 8,  # M4 minimum is 8 (uses n_out/4 bins, Rust requires nb_bins >= 2)
         'use_logscale': True,  # Use logarithmic scaling for output_length
     },
-    # 'uniform_subsample': {
-    #     'param_name': 'output_length',
-    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': True,  # Use logarithmic scaling for output_length
-    # },
-    # 'rdp_downsample': {
-    #     'param_name': 'output_length',
-    #     'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': True,  # Use logarithmic scaling for output_length
-    # },
-    # 'fpcs_downsample': {
-    #     'param_name': 'rate',
-    #     'param_bounds': None,  # Will be set dynamically: (1, data_length // 3)
-    #     'param_type': 'int',
-    #     'param_direction': 'direct',  # Higher rate = More reduction = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': False,  # Linear sampling: rate has direct relationship with window size
-    # },
-    # 'tda_downsample': {
-    #     'param_name': 'filter_level',
-    #     'param_bounds': (0.0, 1.0),  # Persistence threshold for TDA downsampling
-    #     'param_type': 'float',
-    #     'param_direction': 'direct',  # Higher filter_level = Higher threshold = More downsampling = Lower PAE
-    #     'algorithm_type': 'reducer',
-    #     'use_logscale': True,  # Linear sampling: threshold directly controls persistence filtering
-    # },
+    'uniform_subsample': {
+        'param_name': 'output_length',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': True,  # Use logarithmic scaling for output_length
+    },
+    'rdp_downsample': {
+        'param_name': 'output_length',
+        'param_bounds': None,  # Will be set dynamically: (3, data_length - 1)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # Lower output_length = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': True,  # Use logarithmic scaling for output_length
+    },
+    'fpcs_downsample': {
+        'param_name': 'rate',
+        'param_bounds': None,  # Will be set dynamically: (1, data_length // 3)
+        'param_type': 'int',
+        'param_direction': 'direct',  # Higher rate = More reduction = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': False,  # Linear sampling: rate has direct relationship with window size
+    },
+    'tda_downsample': {
+        'param_name': 'filter_level',
+        'param_bounds': (0.0, 1.0),  # Persistence threshold for TDA downsampling
+        'param_type': 'float',
+        'param_direction': 'direct',  # Higher filter_level = Higher threshold = More downsampling = Lower PAE
+        'algorithm_type': 'reducer',
+        'use_logscale': True,  # Linear sampling: threshold directly controls persistence filtering
+    },
     
     # AGGREGATOR ALGORITHMS - Time Series Aggregation
-    # 'asap_aggregator': {
-    #     'param_name': 'resolution',
-    #     'param_bounds': (2, None),  # Will be set dynamically: (3, data_length // 2)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # INVERSE: Higher resolution = Less aggregation = Higher PAE
-    #     'algorithm_type': 'aggregator',
-    #     'use_logscale': True,  # Exponential spacing for smooth progression
-    # },
-    # 'bin_average_aggregator': {
-    #     'param_name': 'bins',
-    #     'param_bounds': None,  # Will be set dynamically: (2, data_length)
-    #     'param_type': 'int',
-    #     'param_direction': 'inverse',  # Higher bins = Less aggregation = Higher PAE
-    #     'algorithm_type': 'aggregator',
-    #     'use_logscale': True,  # Use logarithmic spacing for bins
-    # },
+    'asap_aggregator': {
+        'param_name': 'resolution',
+        'param_bounds': (2, None),  # Will be set dynamically: (3, data_length // 2)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # INVERSE: Higher resolution = Less aggregation = Higher PAE
+        'algorithm_type': 'aggregator',
+        'use_logscale': True,  # Exponential spacing for smooth progression
+    },
+    'bin_average_aggregator': {
+        'param_name': 'bins',
+        'param_bounds': None,  # Will be set dynamically: (2, data_length)
+        'param_type': 'int',
+        'param_direction': 'inverse',  # Higher bins = Less aggregation = Higher PAE
+        'algorithm_type': 'aggregator',
+        'use_logscale': True,  # Use logarithmic spacing for bins
+    },
 }
 
 
