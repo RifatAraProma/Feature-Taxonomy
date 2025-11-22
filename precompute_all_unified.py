@@ -57,6 +57,24 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for server environments
 import matplotlib.pyplot as plt
 
+
+def convert_to_serializable(obj):
+    """Convert NumPy types to native Python types for JSON serialization."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, list):
+        return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_to_serializable(item) for item in obj)
+    elif isinstance(obj, dict):
+        return {key: convert_to_serializable(value) for key, value in obj.items()}
+    else:
+        return obj
+
 # Import algorithm routers
 from server.algorithms.transformers import CALLS as TRANSFORMER_CALLS
 from server.algorithms.reducers import CALLS as REDUCER_CALLS
@@ -557,10 +575,10 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
                 "level": 0,
                 "parameter_name": "none",
                 "parameter_value": None,
-                "pae": float(pae_original),
-                "output": y_data.tolist(),
-                "features": original_features,
-                "feature_preservation": perfect_preservation  # Changed: use snake_case
+                "pae": convert_to_serializable(pae_original),
+                "output": convert_to_serializable(y_data.tolist()),
+                "features": convert_to_serializable(original_features),
+                "feature_preservation": convert_to_serializable(perfect_preservation)
             }
             
             level_0_file = os.path.join(output_dir, f"{algo_name}_level_0.json")
@@ -637,11 +655,11 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
                     "algorithm": algo_name,
                     "level": level_idx,
                     "parameter_name": param_name,
-                    "parameter_value": float(param_val) if config['param_type'] == 'float' else int(param_val),
-                    "pae": float(pae_val),
-                    "output": output,  # Keep original format (pairs or values)
-                    "features": simplified_features,
-                    "feature_preservation": preservation_metrics  # Changed: use snake_case
+                    "parameter_value": convert_to_serializable(param_val),
+                    "pae": convert_to_serializable(pae_val),
+                    "output": convert_to_serializable(output),
+                    "features": convert_to_serializable(simplified_features),
+                    "feature_preservation": convert_to_serializable(preservation_metrics)
                 }
                 
                 level_file = os.path.join(output_dir, f"{algo_name}_level_{level_idx}.json")
