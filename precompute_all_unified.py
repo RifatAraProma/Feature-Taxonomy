@@ -71,12 +71,17 @@ from server.features.compute_features import (
 # Import PAE computation
 from server.features.pae import get_pae
 
+# Import ONLY configuration from precompute_100_levels.py to ensure consistency
+# The parameter generation logic is copied here to follow the exact same implementation
+from precompute_100_levels import ALGORITHMS_CONFIG, NUM_LEVELS
+
 
 # =======================================================================================
-# CONFIGURATION - Same as precompute_100_levels.py
+# CONFIGURATION - Imported from precompute_100_levels.py
 # =======================================================================================
 
-NUM_LEVELS = 101  # Level 0 (original) + 100 smoothing levels
+# NUM_LEVELS and ALGORITHMS_CONFIG are imported directly from precompute_100_levels.py
+# This ensures both scripts use EXACTLY the same algorithm configuration
 TEST_DATASET = "stock_aapl_price"  # Default dataset
 
 # Feature categorization for selective interpolation (from precompute_feature_preservation.py)
@@ -100,170 +105,8 @@ POSITION_INDEPENDENT_FEATURES = [
     'spikes_dips'       # Topological persistence diagrams (bottleneck/wasserstein)
 ]
 
-# Algorithm configurations - matches precompute_100_levels.py
-ALGORITHMS_CONFIG = {
-    # TRANSFORMER ALGORITHMS - Modify values without changing length
-    'gaussian_filter': {
-        'param_name': 'sigma',
-        'param_bounds': (1.0, None),  # Will be set dynamically based on data length
-        'param_type': 'float',
-        'param_direction': 'direct',  # Higher sigma = More smoothing = Lower PAE
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    'mean_filter': {
-        'param_name': 'window_size',
-        'param_bounds': (2, None),  # Will be set dynamically: (2, data_length // 4)
-        'param_type': 'int',
-        'param_direction': 'direct',  # Higher window = More smoothing = Lower PAE
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    'median_filter': {
-        'param_name': 'window_size',
-        'param_bounds': (2, None),
-        'param_type': 'int',
-        'param_direction': 'direct',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    'max_filter': {
-        'param_name': 'window_size',
-        'param_bounds': (2, None),
-        'param_type': 'int',
-        'param_direction': 'direct',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    'min_filter': {
-        'param_name': 'window_size',
-        'param_bounds': (2, None),
-        'param_type': 'int',
-        'param_direction': 'direct',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    'savitzky_golay_filter': {
-        'param_name': 'window_size',
-        'param_bounds': (3, None),
-        'param_type': 'int',
-        'param_direction': 'direct',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-        'extra_params': {'polyorder': 2},  # Fixed polynomial order (from precompute_100_levels)
-    },
-    'butterworth_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.99, 0.01),  # Inverse: high freq (0.99) = less smoothing
-        'param_type': 'float',
-        'param_direction': 'inverse',  # INVERSE: Lower cutoff = More smoothing = Lower PAE
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-        'extra_params': {'order': 2},  # Fixed order parameter (from precompute_100_levels)
-    },
-    'chebyshev_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.99, 0.01),
-        'param_type': 'float',
-        'param_direction': 'inverse',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-        'extra_params': {'order': 2, 'ripple_db': 0.5},  # Fixed params (from precompute_100_levels)
-    },
-    'elliptical_filter': {
-        'param_name': 'cutoff_freq_normalized',
-        'param_bounds': (0.99, 0.01),
-        'param_type': 'float',
-        'param_direction': 'inverse',
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-        'extra_params': {'order': 2, 'ripple_db': 0.5, 'max_atten_db': 40},  # Fixed params (from precompute_100_levels)
-    },
-    'fft_cutoff_filter': {
-        'param_name': 'cutoff_freq',
-        'param_bounds': (None, 2),  # Will be set to (data_length, 2)
-        'param_type': 'int',
-        'param_direction': 'inverse',  # INVERSE: Lower cutoff = More smoothing
-        'algorithm_type': 'transformer',
-        'use_logscale': True,
-    },
-    
-    # REDUCER ALGORITHMS - Downsample to fewer points
-    'lttb_downsample': {
-        'param_name': 'output_length',
-        'param_bounds': (None, None),  # Will be set to (data_length, data_length * 0.05)
-        'param_type': 'int',
-        'param_direction': 'inverse',  # INVERSE: Fewer points = More reduction = Lower PAE
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'minmaxlttb_downsample': {
-        'param_name': 'output_length',
-        'param_bounds': (None, None),
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'm4_downsample': {
-        'param_name': 'output_length',
-        'param_bounds': (None, 8),  # Will be (data_length, 8) - M4 requires >= 8 points
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'uniform_subsample': {
-        'param_name': 'output_length',
-        'param_bounds': (None, None),
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'rdp_downsample': {
-        'param_name': 'output_length',
-        'param_bounds': (None, 3),  # RDP requires >= 3 points
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'fpcs_downsample': {
-        'param_name': 'rate',
-        'param_bounds': (1, None),  # Will be (1, data_length // 3)
-        'param_type': 'int',
-        'param_direction': 'direct',  # DIRECT: Higher rate = More downsampling = Lower PAE
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    'tda_downsample': {
-        'param_name': 'filter_level',
-        'param_bounds': (0.0, 1.0),
-        'param_type': 'float',
-        'param_direction': 'direct',
-        'algorithm_type': 'reducer',
-        'use_logscale': True,
-    },
-    
-    # AGGREGATOR ALGORITHMS
-    'bin_average_aggregator': {
-        'param_name': 'bins',
-        'param_bounds': (2, None),  # Will be (2, data_length)
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'aggregator',
-        'use_logscale': True,
-    },
-    'asap_aggregator': {
-        'param_name': 'resolution',
-        'param_bounds': (10, None),  # Will be (10, data_length // 2)
-        'param_type': 'int',
-        'param_direction': 'inverse',
-        'algorithm_type': 'aggregator',
-        'use_logscale': True,
-    },
-}
+# NOTE: ALGORITHMS_CONFIG and NUM_LEVELS are now imported from precompute_100_levels.py
+# This eliminates duplication and ensures both scripts use EXACTLY the same configuration
 
 
 # =======================================================================================
@@ -453,75 +296,158 @@ def call_algorithm(algo_name: str, data: np.ndarray, param_name: str, param_valu
         raise ValueError(f"Unknown algorithm: {algo_name}")
 
 
-def generate_parameter_values(config: Dict, data_length: int) -> List:
-    """Generate 100 parameter values using log-scale sampling (levels 1-100)."""
+def generate_parameter_values(algo_name: str, data_length: int, config: Dict) -> List:
+    """
+    Generate 100 parameter values using log-scale sampling (levels 1-100).
+    
+    FOLLOWS EXACT SAME LOGIC AS precompute_100_levels.py generate_levels() function.
+    """
     param_name = config['param_name']
-    param_bounds = config['param_bounds']
-    param_type = config['param_type']
-    param_direction = config.get('param_direction', 'inverse')
-    use_logscale = config.get('use_logscale', False)
-    algo_type = config.get('algorithm_type', 'transformer')
+    param_bounds = config.get('param_bounds')
     
-    # Determine actual bounds based on data length
-    param_min, param_max = param_bounds
-    
-    # Dynamic bounds for data-length-dependent algorithms
-    if param_min is None or param_max is None:
-        if 'window_size' in param_name:
-            param_min = param_bounds[0] if param_bounds[0] is not None else 2
-            param_max = data_length // 4
-        elif 'sigma' in param_name:
+    # Check if we need to set dynamic bounds
+    # param_bounds could be None, or a tuple with None as max (e.g., (10, None))
+    if param_bounds is None or (isinstance(param_bounds, tuple) and param_bounds[1] is None):
+        # Dynamic bounds based on algorithm
+        if param_bounds is not None and isinstance(param_bounds, tuple):
+            # Use the specified min from config
+            param_min = param_bounds[0]
+        else:
+            param_min = None  # Will be set below
+            
+        if algo_name == 'gaussian_filter':
             param_min = 1.0
             param_max = data_length / 10.0
-        elif param_name == 'cutoff_freq':
-            param_min = data_length
-            param_max = 2
-        elif param_name == 'output_length':
-            param_min = data_length
-            param_max = max(3, int(data_length * 0.05))
-            if 'm4' in str(config):
-                param_max = max(8, param_max)
-        elif param_name == 'rate':
-            param_min = 1
-            param_max = data_length // 3
-        elif param_name == 'bins':
+        elif algo_name == 'fft_cutoff_filter':
             param_min = 2
             param_max = data_length
-        elif param_name == 'resolution':
-            param_min = 10
-            param_max = data_length // 2
+        elif algo_name in ['mean_filter', 'median_filter', 'min_filter', 'max_filter']:
+            # Window-based filters: window_size from 2 to data_length/4
+            param_min = 2
+            param_max = max(5, data_length // 4)
+        elif algo_name == 'savitzky_golay_filter':
+            # Savitzky-Golay: window_size must be odd and > polyorder
+            # Start from 3 (minimum for polyorder=2) to data_length/4
+            param_min = 3
+            param_max = max(7, data_length // 4)
+        elif algo_name in ['lttb_downsample', 'minmaxlttb_downsample', 'uniform_subsample', 'rdp_downsample']:
+            # Fixed-count downsamplers: output_length from 3 to data_length - 1
+            param_min = 3
+            param_max = data_length - 1
+        elif algo_name == 'fpcs_downsample':
+            # FPCS: rate from 1 (most points) to a value that ensures complete coverage
+            param_min = 1
+            param_max = max(3, data_length // 3)  # Ensure at least 3 windows
+        elif algo_name == 'm4_downsample':
+            # M4: minimum 8, must be multiple of 4
+            param_min = config.get('minimum_value', 8)
+            param_max = data_length - 1
+        elif algo_name == 'bin_average_aggregator':
+            # Bin average: bins from 2 to data_length
+            param_min = 2
+            param_max = data_length
+        elif algo_name == 'asap_aggregator':
+            # ASAP: resolution from 10 to data_length // 2
+            if param_min is None:
+                param_min = 10  # Fallback if not set in config
+            param_max = data_length // 2  # Max that triggers aggregation
+    else:
+        param_min, param_max = param_bounds
     
-    num_transform_levels = NUM_LEVELS - 1  # 100 levels (excluding level 0)
+    # Generate parameter values for levels 1-100 (100 levels)
+    num_transform_levels = NUM_LEVELS - 1  # Exclude level 0
     
-    if use_logscale:
+    if config.get('use_logscale', False):
+        # LineSmooth approach: logarithmic scaling for linear PAE relationship
+        import math
         param_values = []
+        param_direction = config.get('param_direction')
+        
         for i in range(num_transform_levels):
+            # Normalize to [0, 1] for levels 1-100
             filter_level = i / (num_transform_levels - 1)
+            # Apply logarithmic scaling: log(1.0 * (1 - x) + e * x)
             scaled_level = math.log(1.0 * (1 - filter_level) + math.e * filter_level)
             
+            # Map to parameter range based on direction
+            # Goal: Higher level → More smoothing → Lower PAE
             if param_direction == 'direct':
+                # Direct relationship: Higher param = More smoothing
+                # Level 1: param_min (least smoothing)
+                # Level 100: param_max (most smoothing)
                 param_val = param_min + scaled_level * (param_max - param_min)
             else:  # 'inverse'
+                # Inverse relationship: Lower param = More smoothing
+                # Level 1: param_max (least smoothing)
+                # Level 100: param_min (most smoothing)
                 param_val = param_max - scaled_level * (param_max - param_min)
             
-            if param_type == 'int':
-                param_val = int(param_val)
-                param_val = max(param_min, min(param_val, param_max))
+            if config['param_type'] == 'int':
+                param_val = int(param_val)  # EXACT SAME: use int() like precompute_100_levels.py
+                if algo_name == 'fft_cutoff_filter':
+                    param_val = max(2, min(param_val, data_length))
             else:
                 param_val = max(param_min, min(param_val, param_max))
             
             param_values.append(param_val)
+        param_values = np.array(param_values)
     else:
-        # Linear spacing
-        if param_direction == 'direct':
-            param_values = np.linspace(param_min, param_max, num_transform_levels)
-        else:
-            param_values = np.linspace(param_max, param_min, num_transform_levels)
+        # Linear mapping
+        param_direction = config.get('param_direction', 'inverse')
         
-        if param_type == 'int':
-            param_values = [int(v) for v in param_values]
+        if param_direction == 'direct':
+            # Direct: Higher level → Higher param → More smoothing → Lower PAE
+            if config['param_type'] == 'float':
+                param_values = np.linspace(param_min, param_max, num_transform_levels)
+            else:
+                param_values = np.linspace(param_min, param_max, num_transform_levels, dtype=int)
+        else:  # 'inverse'
+            # Inverse: Higher level → Lower param → More smoothing → Lower PAE
+            if config['param_type'] == 'float':
+                param_values = np.linspace(param_max, param_min, num_transform_levels)
+            else:
+                param_values = np.linspace(param_max, param_min, num_transform_levels, dtype=int)
     
-    return param_values
+    # Special handling for savitzky_golay_filter: ensure window_size is odd
+    if algo_name == 'savitzky_golay_filter':
+        polyorder = config.get('extra_params', {}).get('polyorder', 2)
+        # Ensure all window sizes are odd and > polyorder
+        param_values_fixed = []
+        for p in param_values:
+            p_int = int(p)
+            # Make odd if even
+            if p_int % 2 == 0:
+                p_int += 1
+            # Ensure > polyorder
+            if p_int <= polyorder:
+                p_int = polyorder + 1
+                # Make odd if needed
+                if p_int % 2 == 0:
+                    p_int += 1
+            param_values_fixed.append(p_int)
+        param_values = np.array(param_values_fixed)
+    
+    # Special handling for m4_downsample: ensure output_length is multiple of 4
+    if algo_name == 'm4_downsample':
+        multiple_of = config.get('requires_multiple_of', 4)
+        minimum_val = config.get('minimum_value', 8)
+        # Ensure all values are multiples of 4 and >= minimum
+        param_values_fixed = []
+        for p in param_values:
+            p_int = int(p)
+            # Ensure >= minimum
+            if p_int < minimum_val:
+                p_int = minimum_val
+            # Round to nearest multiple of 4
+            p_int = (p_int // multiple_of) * multiple_of
+            # Ensure still >= minimum after rounding
+            if p_int < minimum_val:
+                p_int = minimum_val
+            param_values_fixed.append(p_int)
+        param_values = np.array(param_values_fixed)
+    
+    return param_values.tolist()
+
 
 
 # =======================================================================================
@@ -583,8 +509,9 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
     
     # ============================================================
     # STEP 2: Generate parameter values for levels 1-100
+    # EXACT SAME LOGIC AS precompute_100_levels.py
     # ============================================================
-    param_values = generate_parameter_values(config, len(y_data))
+    param_values = generate_parameter_values(algo_name, len(y_data), config)
     param_name = config['param_name']
     
     # ============================================================
