@@ -53,6 +53,9 @@ import time
 from typing import Dict, List, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timedelta
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for server environments
+import matplotlib.pyplot as plt
 
 # Import algorithm routers
 from server.algorithms.transformers import CALLS as TRANSFORMER_CALLS
@@ -126,7 +129,9 @@ class ProgressBar:
     def update(self, n: int = 1):
         """Update progress by n steps."""
         self.current = min(self.current + n, self.total)
-        self._display()
+        # Only display every 10th update or at completion to reduce spam
+        if self.current % 10 == 0 or self.current >= self.total:
+            self._display()
     
     def _display(self):
         """Display current progress."""
@@ -583,8 +588,28 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
                 # Extract y-values (SAME AS precompute_feature_preservation.py)
                 y_simplified = extract_y_values(output)
                 
-                # Compute PAE
-                pae_val = get_pae(y_simplified.tolist())
+                # Compute PAE - EXACT SAME LOGIC AS precompute_100_levels.py lines 438-454
+                # For reducers/aggregators with fewer points, interpolate to original length
+                # to ensure fair PAE comparison (all algorithms evaluated at same resolution)
+                if isinstance(output, list) and len(output) > 0 and isinstance(output[0], (list, tuple)) and len(output[0]) == 2:
+                    # Reducer/Aggregator output: list of [x, y] pairs
+                    # Interpolate to original data length for fair PAE comparison
+                    if len(output) < len(y_data):
+                        # Extract x and y from pairs
+                        x_smooth = np.array([x for x, y in output])
+                        y_smooth_vals = np.array([y for x, y in output])
+                        
+                        # Interpolate to original x positions
+                        x_original = np.arange(len(y_data))
+                        y_for_pae = np.interp(x_original, x_smooth, y_smooth_vals).tolist()
+                    else:
+                        # If somehow we have same or more points, just extract y values
+                        y_for_pae = y_simplified.tolist()
+                else:
+                    # Transformer output: already y-values at original length
+                    y_for_pae = y_simplified.tolist()
+                
+                pae_val = get_pae(y_for_pae)
                 
                 # =====================================================
                 # Compute features for simplified series
@@ -606,12 +631,13 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
                 )
                 
                 # Save level data
+                # EXACT SAME TYPE CONVERSION AS precompute_100_levels.py line 481
                 level_data = {
                     "dataset_name": dataset_id,
                     "algorithm": algo_name,
                     "level": level_idx,
                     "parameter_name": param_name,
-                    "parameter_value": param_val,
+                    "parameter_value": float(param_val) if config['param_type'] == 'float' else int(param_val),
                     "pae": float(pae_val),
                     "output": output,  # Keep original format (pairs or values)
                     "features": simplified_features,
@@ -630,6 +656,72 @@ def compute_algorithm_unified(algo_name: str, dataset_id: str, y_data: np.ndarra
         progress.update(1)
     
     return True
+
+
+def create_pae_plot(algo_name: str, dataset_id: str, output_dir: str):
+    """
+    Create a simple plot showing Level (x-axis) vs PAE (y-axis) for sanity checking.
+    
+    Args:
+        algo_name: Algorithm name
+        dataset_id: Dataset identifier
+        output_dir: Directory containing precomputed JSON files
+    """
+    # Collect levels and PAE values from saved JSON files
+    levels = []
+    pae_values = []
+    param_values = []
+    
+    for level_idx in range(NUM_LEVELS):
+        level_file = os.path.join(output_dir, f"{algo_name}_level_{level_idx}.json")
+        if not os.path.exists(level_file):
+            continue
+        
+        try:
+            with open(level_file, 'r') as f:
+                data = json.load(f)
+            
+            levels.append(level_idx)
+            pae_values.append(data.get('pae', 0.0))
+            param_values.append(data.get('parameter_value', None))
+        except Exception as e:
+            print(f"⚠️  Warning: Could not read {level_file}: {e}")
+            continue
+    
+    if len(levels) < 2:
+        print(f"⚠️  Not enough data to plot for {algo_name}")
+        return
+    
+    # Create plots directory inside dataset directory
+    plots_dir = os.path.join(output_dir, 'plots')
+    os.makedirs(plots_dir, exist_ok=True)
+    
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot Level vs PAE
+    ax.plot(levels, pae_values, marker='o', linewidth=2, markersize=4, alpha=0.7)
+    ax.set_xlabel('Level', fontsize=12, fontweight='bold')
+    ax.set_ylabel('PAE (Pixel Approximate Entropy)', fontsize=12, fontweight='bold')
+    ax.set_title(f'{algo_name} - Level vs PAE\n{dataset_id}', fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    
+    # Add parameter range as subtitle if available
+    if param_values[0] is not None and param_values[-1] is not None:
+        param_name = ALGORITHMS_CONFIG[algo_name]['param_name']
+        ax.text(0.5, 0.98, f'{param_name}: {param_values[0]:.3f} → {param_values[-1]:.3f}',
+                transform=ax.transAxes, ha='center', va='top', fontsize=10, style='italic')
+    
+    # Tight layout
+    plt.tight_layout()
+    
+    # Save plot
+    plot_filename = f"{algo_name}_level_vs_pae.png"
+    plot_path = os.path.join(plots_dir, plot_filename)
+    plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    
+    print(f"  ✓ Saved plot: {plot_path}")
 
 
 def compute_feature_scales(dataset_id: str, output_dir: str):
@@ -816,6 +908,14 @@ def compute_algorithm_parallel_wrapper(args):
     # Compute
     try:
         success = compute_algorithm_unified(algo_name, dataset_id, y_data, output_dir, resume)
+        
+        # Create PAE plot after algorithm completes successfully
+        if success:
+            try:
+                create_pae_plot(algo_name, dataset_id, output_dir)
+            except Exception as plot_error:
+                print(f"  ⚠️  Warning: Could not create plot for {algo_name}: {plot_error}")
+        
         return (algo_name, success, None)
     except Exception as e:
         return (algo_name, False, str(e))
@@ -999,6 +1099,11 @@ def main():
                     success = compute_algorithm_unified(algo_name, dataset_id, y_data, output_dir, resume)
                     if success:
                         success_count += 1
+                        # Create PAE plot after successful completion
+                        try:
+                            create_pae_plot(algo_name, dataset_id, output_dir)
+                        except Exception as plot_error:
+                            print(f"  ⚠️  Warning: Could not create plot for {algo_name}: {plot_error}")
                     else:
                         failed.append((algo_name, "Returned False"))
                 except Exception as e:
