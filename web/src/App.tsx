@@ -3,10 +3,12 @@ import DatasetPicker from './components/DatasetPicker'
 import Controls from './components/Controls'
 import ChartPanel from './components/ChartPanel'
 import MetricsBar from './components/MetricsBar'
+import PlotsGallery from './components/PlotsGallery'
 import { getSeries, postSmooth, getPrecomputedInfo } from './api'
 import { getAlgorithmColor } from './constants/algorithmColors'
 
 export default function App(){
+  const [activeTab, setActiveTab] = useState<'explorer' | 'plots'>('explorer')
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
@@ -48,6 +50,8 @@ export default function App(){
         
         // Convert all outputs to cache format for instant access
         const allLevels: any = {};
+        let level0Features = {};  // Store level 0 features to use as "original" for all levels
+        
         if (data.allOutputs) {
           for (const levelData of data.allOutputs) {
             // Handle both formats:
@@ -69,17 +73,30 @@ export default function App(){
               yhat = [];
             }
             
+            // Save level 0 features as the "original" for all levels
+            if (levelData.level === 0) {
+              level0Features = levelData.features || {};
+            }
+            
             allLevels[levelData.level] = {
               yhat: yhat,
               params: {[data.paramName]: levelData.paramValue},
               banking: {aspect: 1.0, heightPx: 0},
-              features: levelData.features || {original: {}, simplified: {}},
+              features: levelData.features || {},  // Store simplified features for this level
               metrics: {
                 featurePreservation: levelData.featurePreservation || {}
               },
               pae: levelData.pae,
               paramName: data.paramName,
               paramValue: levelData.paramValue
+            };
+          }
+          
+          // Now add "original" (level 0) features to all levels
+          for (const level in allLevels) {
+            allLevels[level].features = {
+              original: level0Features,
+              simplified: allLevels[level].features
             };
           }
         }
@@ -130,7 +147,7 @@ export default function App(){
       const cached = precomputedCache.allLevels[param];
       console.log(`[DEBUG] Setting smooth data: ${cached.yhat.length} points, first 3:`, cached.yhat.slice(0, 3));
       setSmooth(cached.yhat);
-      setAspect(cached.banking?.aspect || 1.0);
+       setAspect(cached.banking?.aspect || 1.0);
       setMetrics(cached.metrics);
       
       // Check if features exist in cache
@@ -139,7 +156,7 @@ export default function App(){
          Object.keys(cached.features.simplified || {}).length > 0);
       
       if (hasCachedFeatures) {
-        console.log('[PRECOMPUTED] Using cached features');
+        console.log('[PRECOMPUTED] ✓ Using cached features (no network call)');
         setOverlays(cached.features);
       } else if (selectedFeature !== 'none') {
         // Features not in cache but user wants to see them - fetch from backend
@@ -245,14 +262,14 @@ export default function App(){
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        {/* Header */}
+        {/* Header with Tabs */}
         <div style={{
-          padding: '20px 24px',
+          padding: '20px 24px 0 24px',
           backgroundColor: '#fff',
           borderBottom: '1px solid #e0e0e0',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
             <div>
               <h1 style={{margin: 0, fontSize: 24, fontWeight: 600, color: '#333'}}>
                 Temporal Data Feature Taxonomy
@@ -262,65 +279,107 @@ export default function App(){
               </p>
             </div>
           </div>
+
+          {/* Tab Navigation */}
+          <div style={{display: 'flex', gap: 4}}>
+            <button
+              onClick={() => setActiveTab('explorer')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'explorer' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'explorer' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'explorer' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'explorer' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              🔍 Data Explorer
+            </button>
+            <button
+              onClick={() => setActiveTab('plots')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'plots' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'plots' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'plots' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'plots' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📊 Plots Gallery
+            </button>
+          </div>
         </div>
 
-        {/* Chart Area */}
-        <div style={{
-          flex: 1,
-          padding: 24,
-          overflow: 'auto'
-        }}>
-          <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
-          <MetricsBar metrics={metrics} datasetId={dataset} />
-        </div>
+        {/* Tab Content */}
+        {activeTab === 'explorer' ? (
+          <div style={{
+            flex: 1,
+            padding: 24,
+            overflow: 'auto'
+          }}>
+            <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
+            <MetricsBar metrics={metrics} datasetId={dataset} />
+          </div>
+        ) : (
+          <PlotsGallery dataset={dataset} />
+        )}
       </div>
 
-      {/* Right Control Panel */}
-      <div style={{
-        width: 360,
-        backgroundColor: '#fff',
-        borderLeft: '1px solid #e0e0e0',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '-2px 0 8px rgba(0,0,0,0.1)'
-      }}>
+      {/* Right Control Panel - Only show for Explorer tab */}
+      {activeTab === 'explorer' && (
         <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fafafa'
-        }}>
-          <h2 style={{margin: 0, fontSize: 18, fontWeight: 600, color: '#333'}}>
-            Controls
-          </h2>
-        </div>
-        
-        <div style={{
-          flex: 1,
-          padding: 24,
-          overflow: 'auto',
+          width: 360,
+          backgroundColor: '#fff',
+          borderLeft: '1px solid #e0e0e0',
           display: 'flex',
           flexDirection: 'column',
-          gap: 24
+          boxShadow: '-2px 0 8px rgba(0,0,0,0.1)'
         }}>
-          <DatasetPicker value={dataset} onChange={setDataset} />
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: '1px solid #e0e0e0',
+            backgroundColor: '#fafafa'
+          }}>
+            <h2 style={{margin: 0, fontSize: 18, fontWeight: 600, color: '#333'}}>
+              Controls
+            </h2>
+          </div>
           
-          <Controls
-            dataset={dataset}
-            setDataset={setDataset}
-            method={method}
-            setMethod={setMethod}
-            param={param}
-            setParam={setParam}
-            selectedFeature={selectedFeature}
-            setSelectedFeature={setSelectedFeature}
-            paeValue={paeValue}
-            precomputedInfo={precomputedInfo}
-            origLength={orig.length}
-            smoothLength={smooth.length}
-            algorithmColor={getAlgorithmColor(method)}
-          />
+          <div style={{
+            flex: 1,
+            padding: 24,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 24
+          }}>
+            <DatasetPicker value={dataset} onChange={setDataset} />
+            
+            <Controls
+              dataset={dataset}
+              setDataset={setDataset}
+              method={method}
+              setMethod={setMethod}
+              param={param}
+              setParam={setParam}
+              selectedFeature={selectedFeature}
+              setSelectedFeature={setSelectedFeature}
+              paeValue={paeValue}
+              precomputedInfo={precomputedInfo}
+              origLength={orig.length}
+              smoothLength={smooth.length}
+              algorithmColor={getAlgorithmColor(method)}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
