@@ -4,11 +4,14 @@ import Controls from './components/Controls'
 import ChartPanel from './components/ChartPanel'
 import MetricsBar from './components/MetricsBar'
 import PlotsGallery from './components/PlotsGallery'
+import OriginalPlotsGallery from './components/OriginalPlotsGallery'
+import PrecomputedPlotsGallery from './components/PrecomputedPlotsGallery'
+import RankingsViewer from './components/RankingsViewer'
 import { getSeries, postSmooth, getPrecomputedInfo } from './api'
 import { getAlgorithmColor } from './constants/algorithmColors'
 
 export default function App(){
-  const [activeTab, setActiveTab] = useState<'explorer' | 'plots'>('explorer')
+  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'pae' | 'rankings'>('explorer')
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
@@ -58,14 +61,18 @@ export default function App(){
             // - Transformers: array of y-values [y1, y2, y3, ...]
             // - Reducers: array of [x, y] tuples [[x1, y1], [x2, y2], ...]
             let yhat;
+            let xValues: number[] = [];  // Extract x-coordinates for feature mapping
+            
             if (levelData.output && levelData.output.length > 0) {
               if (Array.isArray(levelData.output[0])) {
                 // Reducer format: [[x, y], [x, y], ...]
                 // x is already 0-indexed, convert to 1-indexed for chart (t starts at 1)
+                xValues = levelData.output.map((pair: [number, number]) => pair[0] + 1);
                 yhat = levelData.output.map((pair: [number, number]) => ({t: pair[0] + 1, y: pair[1]}));
                 console.log(`[DEBUG] Reducer format detected. First 3 pairs:`, levelData.output.slice(0, 3), '→', yhat.slice(0, 3));
               } else {
                 // Transformer format: [y, y, y, ...]
+                xValues = levelData.output.map((_: number, idx: number) => idx + 1);
                 yhat = levelData.output.map((y: number, idx: number) => ({t: idx + 1, y}));
                 console.log(`[DEBUG] Transformer format detected. Length: ${levelData.output.length}`);
               }
@@ -73,16 +80,70 @@ export default function App(){
               yhat = [];
             }
             
+            // Add x-coordinates to position-dependent features for correct overlay positioning
+            const features = levelData.features ? {...levelData.features} : {};
+            
+            if (features.extrema && xValues.length > 0) {
+              // Map extrema indices to actual x-coordinates
+              if (features.extrema.minima) {
+                features.extrema.minima = features.extrema.minima.map((ext: any) => ({
+                  ...ext,
+                  x: xValues[ext.t - 1] || ext.t  // t is 1-indexed, xValues is 0-indexed
+                }));
+              }
+              if (features.extrema.maxima) {
+                features.extrema.maxima = features.extrema.maxima.map((ext: any) => ({
+                  ...ext,
+                  x: xValues[ext.t - 1] || ext.t
+                }));
+              }
+            }
+            
+            if (features.regimes && features.regimes.regimes && xValues.length > 0) {
+              // Map regime boundaries to actual x-coordinates
+              features.regimes.regimes = features.regimes.regimes.map((regime: any) => ({
+                ...regime,
+                start_x: xValues[regime.start] || regime.start,
+                end_x: xValues[regime.end] || regime.end,
+                a: xValues[regime.start] || regime.start,  // For Vega spec compatibility
+                b: xValues[regime.end] || regime.end,       // For Vega spec compatibility
+                baseline: regime.baseline_mean  // Ensure baseline field exists
+              }));
+            }
+            
+            if (features.regimes && features.regimes.change_points && xValues.length > 0) {
+              // Store x-coordinates for change points
+              features.regimes.change_points_x = features.regimes.change_points.map((idx: number) => 
+                xValues[idx] || idx + 1
+              );
+            }
+            
+            if (features.spikes_dips && xValues.length > 0) {
+              // Map spike/dip indices to actual x-coordinates
+              if (features.spikes_dips.spikes) {
+                features.spikes_dips.spikes = features.spikes_dips.spikes.map((spike: any) => ({
+                  ...spike,
+                  x: xValues[spike.index] || spike.index + 1
+                }));
+              }
+              if (features.spikes_dips.dips) {
+                features.spikes_dips.dips = features.spikes_dips.dips.map((dip: any) => ({
+                  ...dip,
+                  x: xValues[dip.index] || dip.index + 1
+                }));
+              }
+            }
+            
             // Save level 0 features as the "original" for all levels
             if (levelData.level === 0) {
-              level0Features = levelData.features || {};
+              level0Features = features;
             }
             
             allLevels[levelData.level] = {
               yhat: yhat,
               params: {[data.paramName]: levelData.paramValue},
               banking: {aspect: 1.0, heightPx: 0},
-              features: levelData.features || {},  // Store simplified features for this level
+              features: features,  // Store features with x-coordinates added
               metrics: {
                 featurePreservation: levelData.featurePreservation || {}
               },
@@ -314,6 +375,54 @@ export default function App(){
             >
               📊 Plots Gallery
             </button>
+            <button
+              onClick={() => setActiveTab('original')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'original' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'original' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'original' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'original' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📈 Original Data
+            </button>
+            <button
+              onClick={() => setActiveTab('pae')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'pae' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'pae' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'pae' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'pae' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📉 PAE Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('rankings')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'rankings' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'rankings' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'rankings' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'rankings' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              🏆 Rankings
+            </button>
           </div>
         </div>
 
@@ -327,8 +436,14 @@ export default function App(){
             <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
             <MetricsBar metrics={metrics} datasetId={dataset} />
           </div>
+        ) : activeTab === 'plots' ? (
+          <PlotsGallery />
+        ) : activeTab === 'original' ? (
+          <OriginalPlotsGallery />
+        ) : activeTab === 'pae' ? (
+          <PrecomputedPlotsGallery />
         ) : (
-          <PlotsGallery dataset={dataset} />
+          <RankingsViewer />
         )}
       </div>
 

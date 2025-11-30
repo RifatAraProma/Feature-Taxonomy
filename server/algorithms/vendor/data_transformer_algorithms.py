@@ -248,8 +248,6 @@ def butterworth_filter(data: list [tuple], cutoff_freq_normalized: float, order:
     the order is the degree of the filter’s polynomial — basically, it controls how steeply the filter transitions from “pass” (keep) 
     to “stop” (attenuate).
     
-    Think of order like the sharpness of the knife at the cutoff frequency.
-
     Low order = dull knife → transition is gradual, smoothing is “soft”.
 
     High order = sharp knife → transition is abrupt, like a brick wall.

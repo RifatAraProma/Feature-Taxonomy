@@ -1622,15 +1622,6 @@ def compute_feature_preservation_metrics(
             if "regression" in simplified_features:
                 regression_result = compute_regression(simp_y_interpolated)
                 simplified_features["regression"] = regression_result
-            
-            # Spikes/Dips: detection based on global mean/std, needs recomputation on interpolated data
-            if "spikes_dips" in simplified_features:
-                from dataclasses import dataclass
-                # Use same config as original (default spike_threshold)
-                cfg = FeatureConfig()
-                spikes_dips_result = compute_spikes_dips(simp_y_interpolated, cfg)
-                simplified_features["spikes_dips"] = spikes_dips_result
-            
             # Periodicity: FFT-based, frequency bins depend on series length, needs recomputation
             # Trend: FFT-based low-frequency component, needs recomputation
             # Noise: FFT-based high-frequency component, needs recomputation

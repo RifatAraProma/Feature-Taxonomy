@@ -161,19 +161,20 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
           case 'changePoints':
             // Change points are nested inside the regimes feature
             const cpRegimesData = features.regimes;
-            if (cpRegimesData && cpRegimesData.change_points) {
+            if (cpRegimesData && (cpRegimesData.change_points_x || cpRegimesData.change_points)) {
               console.log('[ChartPanel] changePoints feature:', cpRegimesData);
-              const cpIndices = cpRegimesData.change_points;
-              if (Array.isArray(cpIndices) && cpIndices.length > 0) {
+              // Use change_points_x (actual x-coordinates) if available, otherwise fall back to indices
+              const cpXValues = cpRegimesData.change_points_x || cpRegimesData.change_points;
+              if (Array.isArray(cpXValues) && cpXValues.length > 0) {
                 // For vertical rules to work, we need to know the y extent
                 // Get min/max y from the smooth data
                 const yValues = smooth.map(d => d.y);
                 const yMin = Math.min(...yValues);
                 const yMax = Math.max(...yValues);
                 
-                // Convert to format expected by overlay: array of {t, yMin, yMax, series}
-                datasets[dataName] = cpIndices.map((t: number) => ({
-                  t,
+                // Convert to format expected by overlay: array of {x, yMin, yMax, series}
+                datasets[dataName] = cpXValues.map((x: number) => ({
+                  x,
                   yMin: yMin,
                   yMax: yMax,
                   series: seriesType
@@ -187,19 +188,20 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
           case 'regimesAndChangePoints':
             // Show change points as simple vertical dashed lines
             const combinedRegimesData = features.regimes;
-            if (combinedRegimesData && combinedRegimesData.change_points) {
+            if (combinedRegimesData && (combinedRegimesData.change_points_x || combinedRegimesData.change_points)) {
               console.log('[ChartPanel] regimesAndChangePoints feature:', combinedRegimesData);
-              const cpIndices = combinedRegimesData.change_points;
-              if (Array.isArray(cpIndices) && cpIndices.length > 0) {
+              // Use change_points_x (actual x-coordinates) if available, otherwise fall back to indices
+              const cpXValues = combinedRegimesData.change_points_x || combinedRegimesData.change_points;
+              if (Array.isArray(cpXValues) && cpXValues.length > 0) {
                 // For vertical rules to work, we need to know the y extent
                 // Get min/max y from the smooth data
                 const yValues = smooth.map(d => d.y);
                 const yMin = Math.min(...yValues);
                 const yMax = Math.max(...yValues);
                 
-                // Convert to format expected by overlay: array of {t, yMin, yMax, series}
-                datasets[dataName] = cpIndices.map((t: number) => ({
-                  t,
+                // Convert to format expected by overlay: array of {x, yMin, yMax, series}
+                datasets[dataName] = cpXValues.map((x: number) => ({
+                  x,
                   yMin: yMin,
                   yMax: yMax,
                   series: seriesType
@@ -215,13 +217,13 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
               console.log('[ChartPanel] Processing spikes_dips feature:', features.spikes_dips);
               // Combine spikes and dips arrays
               const spikesData = (features.spikes_dips.spikes || []).map((s: any) => ({
-                t: s.index,
+                x: s.x || s.index + 1,  // Use x-coordinate if available, fallback to index
                 y: s.value,
                 type: 'spike',
                 series: seriesType
               }));
               const dipsData = (features.spikes_dips.dips || []).map((d: any) => ({
-                t: d.index,
+                x: d.x || d.index + 1,  // Use x-coordinate if available, fallback to index
                 y: d.value,
                 type: 'dip',
                 series: seriesType
@@ -336,17 +338,17 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
         return [];
       };
       
-      // Add original features in teal-green (high contrast, doesn't conflict with algorithms)
-      const origOverlays = processFeature(origFeatures, '#1b9e77', '_orig');
+      // Add original features in steel blue (high contrast, doesn't conflict with algorithms)
+      const origOverlays = processFeature(origFeatures, '#4682B4', '_orig');
       if (origOverlays.length > 0) {
-        console.log('[ChartPanel] Adding', origOverlays.length, 'original feature overlays in teal-green');
+        console.log('[ChartPanel] Adding', origOverlays.length, 'original feature overlays in steel blue');
         featureOverlays.push(...origOverlays);
       }
       
-      // Add simplified features in burnt orange (high contrast, doesn't conflict with algorithms)
-      const simpOverlays = processFeature(simpFeatures, '#d95f02', '_simp');
+      // Add simplified features in dark orange (high contrast, doesn't conflict with algorithms)
+      const simpOverlays = processFeature(simpFeatures, '#FF8C00', '_simp');
       if (simpOverlays.length > 0) {
-        console.log('[ChartPanel] Adding', simpOverlays.length, 'simplified feature overlays in burnt orange');
+        console.log('[ChartPanel] Adding', simpOverlays.length, 'simplified feature overlays in dark orange');
         featureOverlays.push(...simpOverlays);
       }
     }
@@ -363,8 +365,8 @@ export default function ChartPanel({orig, smooth, overlays, aspect, method, sele
       
       // Add legend for feature overlays
       const legendItems = [
-        {label: 'Original', color: '#1b9e77'},
-        {label: 'Simplified', color: '#d95f02'}
+        {label: 'Original', color: '#4682B4'},      // Steel blue
+        {label: 'Simplified', color: '#FF8C00'}     // Dark orange
       ];
       
       datasets.legend = legendItems;

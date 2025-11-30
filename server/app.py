@@ -414,6 +414,66 @@ def spectral(sid):
     s = load_series(sid)
     return jsonify(periodogram(s.get("y", [])))
 
+@app.route("/plots/<dataset_name>/<path:filepath>")
+def serve_plot(dataset_name, filepath):
+    """
+    Serve generated plot SVG files.
+    
+    Args:
+        dataset_name: Name of the dataset (e.g., 'stock_aapl_price')
+        filepath: Path to SVG file (e.g., 'ranking/level_l1_ranking.svg' or 'algorithm_legend.svg')
+    
+    Returns:
+        SVG file content
+    """
+    from flask import send_file, abort
+    import os
+    
+    # Get the project root directory (one level up from server/)
+    project_root = Path(__file__).parent.parent
+    plot_path = project_root / 'plots' / dataset_name / filepath
+    
+    print(f"[PLOTS] Requested: {dataset_name}/{filepath}")
+    print(f"[PLOTS] Looking for: {plot_path}")
+    print(f"[PLOTS] Exists: {plot_path.exists()}")
+    
+    if not plot_path.exists():
+        print(f"[PLOTS] ERROR: File not found at {plot_path}")
+        abort(404, description=f"Plot not found: {dataset_name}/{filepath}")
+    
+    print(f"[PLOTS] Serving: {plot_path}")
+    return send_file(str(plot_path), mimetype='image/svg+xml')
+
+@app.route("/precomputed/<dataset_name>/plots/<filename>")
+def serve_precomputed_plot(dataset_name, filename):
+    """
+    Serve precomputed PNG plot files.
+    
+    Args:
+        dataset_name: Name of the dataset (e.g., 'stock_aapl_price')
+        filename: PNG filename (e.g., 'gaussian_filter_level_vs_pae.png')
+    
+    Returns:
+        PNG file content
+    """
+    from flask import send_file, abort
+    import os
+    
+    # Get the project root directory (one level up from server/)
+    project_root = Path(__file__).parent.parent
+    plot_path = project_root / 'precomputed' / dataset_name / 'plots' / filename
+    
+    print(f"[PRECOMPUTED_PLOTS] Requested: {dataset_name}/plots/{filename}")
+    print(f"[PRECOMPUTED_PLOTS] Looking for: {plot_path}")
+    print(f"[PRECOMPUTED_PLOTS] Exists: {plot_path.exists()}")
+    
+    if not plot_path.exists():
+        print(f"[PRECOMPUTED_PLOTS] ERROR: File not found at {plot_path}")
+        abort(404, description=f"Precomputed plot not found: {dataset_name}/plots/{filename}")
+    
+    print(f"[PRECOMPUTED_PLOTS] Serving: {plot_path}")
+    return send_file(str(plot_path), mimetype='image/png')
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"ok": True})

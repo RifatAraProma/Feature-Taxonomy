@@ -507,7 +507,7 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
   
   return (
     <div style={{
-      marginTop: 74, 
+      marginTop: 100, 
       padding: '20px 24px',
       backgroundColor: '#fff',
       borderRadius: 12,

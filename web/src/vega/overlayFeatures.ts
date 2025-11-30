@@ -5,7 +5,7 @@ export const overlayExtrema = (dataName='extrema', color='#FF1493', seriesType='
   data: {name: dataName},
   mark: {type:'point', filled:true, size:80},
   encoding: {
-    x: {field:'t', type:'quantitative'},
+    x: {field:'x', type:'quantitative'},  // Use 'x' field (actual coordinates) instead of 't' (index)
     y: {field:'y', type:'quantitative'},
     color: {value: color},
     shape: {
@@ -16,7 +16,7 @@ export const overlayExtrema = (dataName='extrema', color='#FF1493', seriesType='
     },
     tooltip: [
       {field:'type'},
-      {field:'t'},
+      {field:'x', title:'Position'},
       {field:'y'},
       {field:'series', title:'Series'}
     ]
@@ -28,13 +28,13 @@ export const overlayChangePoints = (dataName='changePoints', color='#FF1493', se
     data: {name: dataName},
     mark: {type:'rule', strokeWidth: 2.5, strokeDash: [8, 4]},
     encoding: {
-      x: {field:'t', type:'quantitative'},
+      x: {field:'x', type:'quantitative'},  // Use 'x' field (actual coordinates) instead of 't' (index)
       y: {field:'yMin', type:'quantitative'},
       y2: {field:'yMax'},
       color: {value: color},
       opacity: {value:0.7},
       tooltip: [
-        {field:'t', title:'Change Point Index'},
+        {field:'x', title:'Change Point Position'},
         {field:'series', title:'Series'}
       ]
     }
@@ -126,7 +126,7 @@ export const overlaySpikes = (dataName='spikesDips', color='#FF1493', seriesType
   data: {name: dataName},
   mark: {type:'point', filled:true, size:120},
   encoding: {
-    x: {field:'t', type:'quantitative'},
+    x: {field:'x', type:'quantitative'},  // Use 'x' field (actual coordinates) instead of 't' (index)
     y: {field:'y', type:'quantitative'},
     color: {value: color},
     shape: {
@@ -138,7 +138,7 @@ export const overlaySpikes = (dataName='spikesDips', color='#FF1493', seriesType
     opacity: {value:0.85},
     tooltip: [
       {field:'type', title:'Outlier Type'},
-      {field:'t', title:'Index'},
+      {field:'x', title:'Position'},
       {field:'y', title:'Value'},
       {field:'series', title:'Series'}
     ]

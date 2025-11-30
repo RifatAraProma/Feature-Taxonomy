@@ -97,7 +97,7 @@ export default function Controls(p: Props) {
             <option value="savitzky_golay_filter">Savitzky-Golay Filter (polynomial fitting)</option>
           </optgroup>
           <optgroup label="Convolution-Based Filters">
-            <option value="gaussian_filter">Gaussian Filter (smooth curves)</option>
+            <option value="gaussian_filter">Gaussian Filter</option>
           </optgroup>
           <optgroup label="Frequency-Domain Filters">
             <option value="fft_cutoff_filter">FFT Cutoff Filter (frequency window)</option>
@@ -108,20 +108,17 @@ export default function Controls(p: Props) {
             <option value="elliptical_filter">Elliptical (Cauer) Filter (steepest rolloff)</option>
           </optgroup>
           <optgroup label="Reducers (Downsamplers)">
-            <option value="lttb_downsample">LTTB Downsample</option>
-            <option value="m4_downsample">M4 Downsample</option>
-            <option value="minmaxlttb_downsample">MinMax LTTB</option>
+            <option value="lttb_downsample">LTTB </option>
+            <option value="m4_downsample">M4</option>
+            <option value="minmaxlttb_downsample">MinMaxLTTB</option>
             <option value="rdp_downsample">RDP (Douglas-Peucker)</option>
             <option value="uniform_subsample">Uniform Subsample</option>
-            <option value="fpcs_downsample">FPCS Downsample</option>
-            <option value="tda_downsample">TDA Downsample</option>
-            <option value="median_filter_reducer">Median Filter Reducer</option>
-            <option value="min_filter_reducer">Min Filter Reducer</option>
-            <option value="max_filter_reducer">Max Filter Reducer</option>
+            <option value="fpcs_downsample">FPCS</option>
+            <option value="tda_downsample">TopoLines</option>
           </optgroup>
           <optgroup label="Aggregators">
-            <option value="asap_aggregator">ASAP Aggregator</option>
-            <option value="bin_average_aggregator">Bin Average</option>
+            <option value="asap_aggregator">ASAP</option>
+            <option value="bin_average_aggregator">PAA</option>
           </optgroup>
         </select>
       </div>

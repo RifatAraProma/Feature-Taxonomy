@@ -17,3 +17,5 @@ uvicorn>=0.15.0
 pae
 ruptures>=1.1.0
 persim>=0.3.0
+altair>=5.0.0
+vl-convert-python>=1.0.0
