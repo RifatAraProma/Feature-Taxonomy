@@ -30,6 +30,9 @@ sys.path.insert(0, str(Path(__file__).parent / 'server'))
 from algorithm_colors import get_algorithm_color
 from algorithm_names import get_algorithm_name
 
+# Import shared bump chart utility
+from bump_chart_utils import create_bump_chart as create_bump_chart_base
+
 
 # Density buckets based on data length (using tertiles)
 DENSITY_THRESHOLDS = {
@@ -233,6 +236,27 @@ def compute_density_ranks(density: str = None) -> pd.DataFrame:
 
 
 def create_bump_chart(bump_df: pd.DataFrame, density: str = None) -> alt.Chart:
+    """
+    Create a minimal, clean bump chart - EXACT same style as rank_algorithms_by_dataset_type.py
+
+    bump_df must contain:
+        density_bucket, algorithm, algorithm_name, color, overall_rank
+    """
+    # Order density buckets: explicit order + "Average rank"
+    density_order = ['low', 'medium', 'high', 'Average rank']
+    
+    return create_bump_chart_base(
+        bump_df=bump_df,
+        column_order=density_order,
+        column_name='density_bucket',
+        rank_column='overall_rank',  # Use overall_rank for y-position
+        overall_rank_column='overall_rank',
+        avg_rank_column='rank_mean',  # Use rank_mean for tooltip
+        average_label='Average rank',
+    )
+
+
+def main():
     """
     Create a minimal, clean bump chart - EXACT same style as rank_algorithms_by_dataset_type.py
 

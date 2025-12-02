@@ -20,6 +20,9 @@ sys.path.insert(0, str(Path(__file__).parent / 'server'))
 from algorithm_colors import get_algorithm_color
 from algorithm_names import get_algorithm_name
 
+# Import shared bump chart utility
+from bump_chart_utils import create_bump_chart as create_bump_chart_base
+
 
 def load_all_ranking_data() -> pd.DataFrame:
     """
@@ -136,6 +139,28 @@ def compute_global_ranks() -> pd.DataFrame:
 
 
 def create_bump_chart(bump_df: pd.DataFrame) -> alt.Chart:
+    """
+    Create a minimal, clean bump chart - EXACT same style as rank_algorithms_by_dataset_type.py
+
+    bump_df must contain:
+        feature, algorithm, algorithm_name, color, overall_rank
+    """
+    # Order features: all features alphabetically + "Average rank"
+    features = sorted([f for f in bump_df['feature'].unique() if f != 'Average rank'])
+    feature_order = features + ['Average rank']
+    
+    return create_bump_chart_base(
+        bump_df=bump_df,
+        column_order=feature_order,
+        column_name='feature',
+        rank_column='overall_rank',  # Use overall_rank for y-position
+        overall_rank_column='overall_rank',
+        avg_rank_column='rank_mean',  # Use rank_mean for tooltip
+        average_label='Average rank',
+    )
+
+
+def main():
     """
     Create a minimal, clean bump chart - EXACT same style as rank_algorithms_by_dataset_type.py
 

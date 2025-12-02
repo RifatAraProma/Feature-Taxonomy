@@ -702,18 +702,292 @@ def save_rankings_to_csv(df, output_dir):
 
 
 
+def save_fc_scores_to_csv(df, output_dir):
+    """
+    Save all FC scores for each data point to CSV for future analysis.
+    
+    Creates fc_scores_all.csv with columns:
+    - algorithm, level, metric, pae, metric_value, pae_z, preservation_z, fc_score
+    
+    This allows analyzing FC score distributions without regenerating plots.
+    """
+    print(f"\n  Computing and saving FC scores for all data points...")
+    
+    all_fc_data = []
+    metrics = sorted(df['full_metric_name'].unique())
+    
+    for metric_name in metrics:
+        metric_df = df[df['full_metric_name'] == metric_name].copy()
+        
+        # Compute z-scores for PAE
+        pae_mean = metric_df['pae'].mean()
+        pae_std = metric_df['pae'].std()
+        metric_df['pae_z'] = (metric_df['pae'] - pae_mean) / pae_std
+        
+        # Compute z-scores for metric value
+        metric_mean = metric_df['metric_value'].mean()
+        metric_std = metric_df['metric_value'].std()
+        metric_df['metric_z'] = (metric_df['metric_value'] - metric_mean) / metric_std
+        
+        # Preservation z-score (negate for error metrics)
+        metric_df['preservation_z'] = -metric_df['metric_z']
+        
+        # FC Score = Preservation_z - PAE_z
+        metric_df['fc_score'] = metric_df['preservation_z'] - metric_df['pae_z']
+        
+        # Store relevant columns
+        for _, row in metric_df.iterrows():
+            all_fc_data.append({
+                'algorithm': row['algorithm'],
+                'level': row['level'],
+                'metric': metric_name,
+                'pae': row['pae'],
+                'metric_value': row['metric_value'],
+                'pae_z': row['pae_z'],
+                'preservation_z': row['preservation_z'],
+                'fc_score': row['fc_score']
+            })
+    
+    # Save to CSV
+    fc_df = pd.DataFrame(all_fc_data)
+    fc_path = output_dir / "fc_scores_all.csv"
+    fc_df.to_csv(fc_path, index=False, float_format='%.6f')
+    
+    print(f"  ✅ FC Scores CSV: {fc_path.name}")
+    print(f"     ({len(fc_df):,} data points: {df['algorithm'].nunique()} algorithms × {df['level'].nunique()} levels × {len(metrics)} metrics)")
+    
+    # Calculate and save quartiles
+    p25 = np.percentile(fc_df['fc_score'], 25)
+    p50 = np.percentile(fc_df['fc_score'], 50)
+    p75 = np.percentile(fc_df['fc_score'], 75)
+    
+    quartiles_df = pd.DataFrame([{
+        'percentile': '25th',
+        'value': p25
+    }, {
+        'percentile': '50th',
+        'value': p50
+    }, {
+        'percentile': '75th',
+        'value': p75
+    }])
+    
+    quartiles_path = output_dir / "fc_scores_quartiles.csv"
+    quartiles_df.to_csv(quartiles_path, index=False, float_format='%.6f')
+    
+    print(f"  ✅ Quartiles CSV: {quartiles_path.name}")
+    print(f"     25th: {p25:.3f}, 50th: {p50:.3f}, 75th: {p75:.3f}")
+    
+    return fc_df
+
+def create_fc_distribution_plot(df, metric_name, dataset_name):
+    """
+    FC score distribution plot with:
+    - Grey quartile bands
+    - Algorithm-colored points (consistent style)
+    - Quartile boundary lines
+    - Side annotations labeling the performance regions
+    """
+    # Filter to specific metric
+    metric_df = df[df['full_metric_name'] == metric_name].copy()
+    if len(metric_df) == 0:
+        return None
+
+    # Compute z-scores
+    pae_mean = metric_df['pae'].mean()
+    pae_std = metric_df['pae'].std()
+    metric_df['pae_z'] = (metric_df['pae'] - pae_mean) / pae_std
+
+    metric_mean = metric_df['metric_value'].mean()
+    metric_std = metric_df['metric_value'].std()
+    metric_df['metric_z'] = (metric_df['metric_value'] - metric_mean) / metric_std
+
+    # Preservation & FC
+    metric_df['preservation_z'] = -metric_df['metric_z']
+    metric_df['fc_score'] = metric_df['preservation_z'] - metric_df['pae_z']
+
+    fc_df = metric_df[['algorithm', 'level', 'fc_score']].copy()
+
+    # Quartiles
+    p25 = np.percentile(fc_df['fc_score'], 25)
+    p50 = np.percentile(fc_df['fc_score'], 50)
+    p75 = np.percentile(fc_df['fc_score'], 75)
+
+    # Y-domain with padding
+    fc_min, fc_max = fc_df['fc_score'].min(), fc_df['fc_score'].max()
+    fc_padding = (fc_max - fc_min) * 0.05 if fc_max > fc_min else 0.1
+    fc_domain = [fc_min - fc_padding, fc_max + fc_padding]
+
+    level_min, level_max = fc_df['level'].min(), fc_df['level'].max()
+    level_domain = [level_min - 2, level_max + 2]
+
+    # Grey quartile bands
+    band_data = pd.DataFrame([
+        {'y_min': p75, 'y_max': fc_domain[1], 'category': 'Excellent'},
+        {'y_min': p50, 'y_max': p75,        'category': 'Good'},
+        {'y_min': p25, 'y_max': p50,        'category': 'Fair'},
+        {'y_min': fc_domain[0], 'y_max': p25, 'category': 'Poor'}
+    ])
+
+    band_order  = ['Excellent', 'Good', 'Fair', 'Poor']
+    band_colors = ['#F0F0F0', '#CCCCCC', '#999999', '#666666']
+
+    bands = alt.Chart(band_data).mark_rect(opacity=0.25).encode(
+        y=alt.Y('y_min:Q', scale=alt.Scale(domain=fc_domain, nice=False)),
+        y2='y_max:Q',
+        color=alt.Color('category:N',
+                       scale=alt.Scale(domain=band_order, range=band_colors),
+                       legend=None)
+    )
+
+    # CONSISTENT MARK STYLE with other charts
+    scatter = alt.Chart(fc_df).mark_circle(
+        size=60,            # CONSISTENT
+        opacity=0.6,        # CONSISTENT
+        # stroke='white',     # CONSISTENT
+        # strokeWidth=0.5     # CONSISTENT
+    ).encode(
+        x=alt.X('level:Q',
+                title='Smoothing Level',
+                scale=alt.Scale(domain=level_domain)),
+        y=alt.Y('fc_score:Q',
+                title='FC Score (Feature-Complexity Score)',
+                scale=alt.Scale(domain=fc_domain)),
+        color=alt.Color(
+            'algorithm:N',
+            scale=alt.Scale(
+                domain=list(ALGORITHM_COLORS.keys()),
+                range=list(ALGORITHM_COLORS.values())
+            ),
+            legend=None
+        ),
+        tooltip=[
+            alt.Tooltip('algorithm:N'),
+            alt.Tooltip('level:Q'),
+            alt.Tooltip('fc_score:Q', format='.4f')
+        ]
+    )
+
+    # Quartile divider lines
+    quartile_lines_data = pd.DataFrame([
+        {'y': p75}, {'y': p50}, {'y': p25}
+    ])
+    quartile_lines = alt.Chart(quartile_lines_data).mark_rule(
+        strokeDash=[5, 5],
+        color='black',
+        opacity=0.6,
+        strokeWidth=2
+    ).encode(y='y:Q')
+
+    # Side region labels (right side)
+    labels_df = pd.DataFrame([
+        {'y': (p75 + fc_domain[1]) / 2, 'label': 'Excellent'},
+        {'y': (p50 + p75) / 2,          'label': 'Good'},
+        {'y': (p25 + p50) / 2,          'label': 'Fair'},
+        {'y': (fc_domain[0] + p25) / 2, 'label': 'Poor'}
+    ])
+
+    side_labels = alt.Chart(labels_df).mark_text(
+        align='left',
+        baseline='middle',
+        dx=5,
+        fontSize=12,
+        fontWeight='bold'
+    ).encode(
+        x=alt.value(705),  # aligned to right outside chart area
+        y='y:Q',
+        text='label:N'
+    )
+
+    # Combine layers
+    chart = alt.layer(
+        bands,
+        scatter,
+        quartile_lines,
+        side_labels
+    ).properties(
+        width=700,
+        height=550
+    ).resolve_scale(
+        color='independent'
+    )
+
+        # ---- SEPARATE PERFORMANCE TIERS LEGEND ----
+    legend_data = pd.DataFrame([
+        {'category': 'Excellent', 'order': 1},
+        {'category': 'Good',      'order': 2},
+        {'category': 'Fair',      'order': 3},
+        {'category': 'Poor',      'order': 4}
+    ])
+
+    legend_rects = alt.Chart(legend_data).mark_rect(
+        width=20,
+        height=20,
+        opacity=0.35
+    ).encode(
+        x=alt.value(10),  # left margin for squares
+        y=alt.Y(
+            'category:N',
+            sort=band_order,
+            axis=None
+        ),
+        color=alt.Color(
+            'category:N',
+            scale=alt.Scale(domain=band_order, range=band_colors),
+            legend=None
+        )
+    )
+
+    legend_labels = alt.Chart(legend_data).mark_text(
+        align='left',
+        baseline='middle',
+        dx=5,
+        fontSize=12
+    ).encode(
+        x=alt.value(35),  # text a bit to the right of squares
+        y=alt.Y(
+            'category:N',
+            sort=band_order,
+            axis=None
+        ),
+        text='category:N',
+        color=alt.value('black')
+    )
+
+    legend = (legend_rects + legend_labels).properties(
+        width=160,
+        height=110,
+        title={
+            'text': 'Performance Tiers',
+            'fontSize': 14,
+            'fontWeight': 'bold'
+        }
+    )
+
+
+    return chart, legend
+
+
+
+
 def main():
     """Generate all plots for a dataset."""
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Generate Vega-Lite SVG plots for feature preservation analysis')
     parser.add_argument('--breakdown', action='store_true',
                        help='Generate all 3 plots (raw + zscore_fc + ranking) instead of just 2 (zscore_fc + ranking)')
+    parser.add_argument('--fc-distribution', action='store_true',
+                       help='Generate FC score distribution plot across all metrics')
+    parser.add_argument('--csv-only', action='store_true',
+                       help='Only generate CSV files (fc_scores_all.csv and fc_scores_quartiles.csv), skip all plots')
     parser.add_argument('--dataset', type=str, default='stock_aapl_price',
                        help='Dataset name (default: stock_aapl_price)')
     args = parser.parse_args()
     
     dataset_name = args.dataset
     breakdown_mode = args.breakdown
+    fc_distribution_mode = args.fc_distribution
+    csv_only_mode = args.csv_only
     
     # Load ALL data (no sampling - we need all algorithms and metrics)
     print(f"📊 Loading ALL precomputed data for {dataset_name}...")
@@ -722,6 +996,13 @@ def main():
     # Create output directory with ranking subdirectory
     output_dir = Path(f"plots/{dataset_name}/ranking")
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # If CSV-only mode, just generate CSV files and exit
+    if csv_only_mode:
+        print(f"\n💾 CSV-ONLY MODE: Generating FC score CSV files only...")
+        fc_df = save_fc_scores_to_csv(df, output_dir)
+        print(f"\n🎉 Done! CSV files saved to: {output_dir.absolute()}")
+        return
     
     # Get all unique metrics (excluding change_points l1/linf)
     metrics = sorted(df['full_metric_name'].unique())
@@ -735,6 +1016,11 @@ def main():
         print(f"\n🎨 STANDARD MODE: Generating {num_plots} plots for {len(metrics)} metrics...")
         print(f"   (zscore_fc + ranking for each metric)")
         print(f"   💡 Use --breakdown flag to include raw scatter plots")
+    
+    if fc_distribution_mode:
+        num_plots += len(metrics)
+        print(f"   📊 FC DISTRIBUTION MODE: Will generate +{len(metrics)} FC distribution plots")
+        print(f"   Total plots: {num_plots}")
     
     # Generate plots for ALL metrics
     for i, metric_name in enumerate(metrics, 1):
@@ -761,6 +1047,21 @@ def main():
             ranking_path = output_dir / f"{metric_name}_ranking.svg"
             ranking_chart.save(str(ranking_path))
             print(f"  ✅ Ranking: {ranking_path.name}")
+        
+        # Plot 4: FC distribution (if flag enabled)
+        if fc_distribution_mode:
+            result = create_fc_distribution_plot(df, metric_name, dataset_name)
+            if result:
+                fc_dist_chart, fc_legend = result
+                fc_dist_path = output_dir / f"{metric_name}_fc_distribution.svg"
+                fc_dist_chart.save(str(fc_dist_path))
+                print(f"  ✅ FC Distribution: {fc_dist_path.name}")
+                
+                # Save legend only once (for first metric)
+                if i == 1:
+                    fc_legend_path = output_dir / "fc_distribution_legend.svg"
+                    fc_legend.save(str(fc_legend_path))
+                    print(f"  ✅ FC Legend: {fc_legend_path.name}")
     
     print(f"\n📁 Output directory: {output_dir.absolute()}")
     print(f"\n✅ ALL PLOTS COMPLETE!")
@@ -773,6 +1074,10 @@ def main():
     # Save ranking data to CSV files
     print(f"\n📊 Exporting ranking data to CSV...")
     save_rankings_to_csv(df, output_dir)
+    
+    # Save FC scores to CSV (always - for future analysis)
+    print(f"\n💾 Saving FC scores to CSV...")
+    fc_df = save_fc_scores_to_csv(df, output_dir)
     
     print(f"\n🎉 Done! All plots saved to: {output_dir.absolute()}")
 
