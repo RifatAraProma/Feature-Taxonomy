@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getPlotUrl } from '../config/cdn';
 
 // List of key grading visualizations from plots/fc_visualizations/
 const GRADING_PLOTS = [

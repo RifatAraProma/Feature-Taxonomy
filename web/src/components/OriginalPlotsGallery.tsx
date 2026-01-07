@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getPlotUrl } from '../config/cdn';
 
 interface Dataset {
   name: string
