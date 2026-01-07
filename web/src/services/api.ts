@@ -5,7 +5,7 @@
 
 import type { FeatureScales } from '../types/scales';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';  // Use Railway URL in production, relative path for dev
+const API_BASE = import.meta.env.VITE_API_URL || '';  // Railway backend URL from environment
 
 /**
  * Fetch global feature preservation scales for a dataset
