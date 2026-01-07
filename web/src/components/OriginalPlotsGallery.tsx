@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getPlotUrl } from '../config/cdn';
+import { getDatasets } from '../api';
 
 interface Dataset {
   name: string
@@ -12,9 +13,8 @@ export default function OriginalPlotsGallery() {
   const [categories, setCategories] = useState<string[]>([])
 
   useEffect(() => {
-    // Load all datasets
-    fetch('/datasets')
-      .then(res => res.json())
+    // Load all datasets using API helper (handles local vs CDN)
+    getDatasets()
       .then(data => {
         // data is an array of {id, n, category}
         const allCategories = new Set<string>()
