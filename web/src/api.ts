@@ -1,4 +1,5 @@
 import { getPrecomputedUrl, CDN_BASE_URL } from './config/cdn';
+import { computeBasicMetrics } from './utils/clientMetrics';
 
 // Detect if running locally (development) or in production
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -86,7 +87,7 @@ export async function getPrecomputedInfo(seriesId: string, algorithm: string) {
   
   return { available: false };
 }
-export async function postSmooth(body: any) {
+export async function postSmooth(body: any, origData?: {t: number, y: number}[]) {
   // Local: use Flask backend via Vite proxy
   // Production: fetch precomputed from CDN
   if (isLocal) {
@@ -126,13 +127,30 @@ export async function postSmooth(body: any) {
     yhat = [];
   }
   
+  // Extract metrics from CDN data
+  let metrics: any = {};
+  
+  // Feature preservation metrics are already computed and stored in CDN files
+  if (data.feature_preservation) {
+    metrics.featurePreservation = data.feature_preservation;
+  }
+  
+  // Compute additional basic metrics if original data provided
+  if (origData && origData.length > 0) {
+    const basicMetrics = computeBasicMetrics(origData, yhat);
+    metrics.mae = basicMetrics.mae;
+    metrics.rmse = basicMetrics.rmse;
+    metrics.correlation = basicMetrics.correlation;
+    metrics.lengthRatio = basicMetrics.lengthRatio;
+  }
+  
   return {
     yhat,
     banking: { aspect: 1.0 },  // Default aspect ratio for CDN data
-    metrics: {},  // No metrics in CDN files
+    metrics,  // Include precomputed feature preservation + computed basic metrics
     pae: data.pae || null,
-    allFeaturesOrig: {},  // No features in CDN files
-    allFeaturesSimp: {},  // No features in CDN files
+    allFeaturesOrig: data.features_original || {},  // Original features if available
+    allFeaturesSimp: data.features || {},  // Simplified features if available
     precomputedInfo: {
       paramName: data.parameter_name,
       paramValue: data.parameter_value

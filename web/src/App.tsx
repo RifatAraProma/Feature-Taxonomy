@@ -316,7 +316,7 @@ export default function App(){
       returnFeatures: returnFeatures,
       banking: true,
       usePAECalibration: usePAECalibration
-    }).then(res => {
+    }, orig).then(res => {
       setSmooth(res.yhat)
       setAspect(res.banking.aspect || 1.0)
       setMetrics(res.metrics)
