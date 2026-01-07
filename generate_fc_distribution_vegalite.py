@@ -220,18 +220,19 @@ def create_fc_distribution_plot(df, dataset_name):
                        legend=None)
     )
     
-    legend_labels = alt.Chart(legend_data).mark_text(
-        align='left',
-        dx=50,
-        fontSize=12,
-        fontWeight='bold'
-    ).encode(
-        y=alt.Y('order:O', axis=None, sort='ascending'),
-        text='category:N',
-        color=alt.value('black')
-    )
+    # Remove text labels - just show colored bands
+    # legend_labels = alt.Chart(legend_data).mark_text(
+    #     align='left',
+    #     dx=50,
+    #     fontSize=12,
+    #     fontWeight='bold'
+    # ).encode(
+    #     y=alt.Y('order:O', axis=None, sort='ascending'),
+    #     text='category:N',
+    #     color=alt.value('black')
+    # )
     
-    legend_chart = (legend + legend_labels).properties(
+    legend_chart = legend.properties(
         width=150,
         height=150,
         title={

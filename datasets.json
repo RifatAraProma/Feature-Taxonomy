@@ -1,0 +1,402 @@
+[
+  {
+    "id": "astro_115_120",
+    "n": 1947,
+    "category": "astro"
+  },
+  {
+    "id": "astro_115_123",
+    "n": 1947,
+    "category": "astro"
+  },
+  {
+    "id": "astro_115_128",
+    "n": 1947,
+    "category": "astro"
+  },
+  {
+    "id": "astro_116_124",
+    "n": 1947,
+    "category": "astro"
+  },
+  {
+    "id": "astro_116_134",
+    "n": 1947,
+    "category": "astro"
+  },
+  {
+    "id": "chi_homicide_monthly",
+    "n": 222,
+    "category": "chi_homicide"
+  },
+  {
+    "id": "chi_homicide_weekly",
+    "n": 969,
+    "category": "chi_homicide"
+  },
+  {
+    "id": "climate_atl_awnd",
+    "n": 3651,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_jfk_awnd",
+    "n": 3651,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_lax_awnd",
+    "n": 3651,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_ord_awnd",
+    "n": 3651,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_sea_awnd",
+    "n": 3651,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_slc_awnd",
+    "n": 3646,
+    "category": "climate_awnd"
+  },
+  {
+    "id": "climate_atl_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_jfk_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_lax_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_ord_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_sea_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_slc_prcp",
+    "n": 3652,
+    "category": "climate_prcp"
+  },
+  {
+    "id": "climate_atl_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "climate_jfk_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "climate_lax_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "climate_ord_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "climate_sea_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "climate_slc_tmax",
+    "n": 3652,
+    "category": "climate_tmax"
+  },
+  {
+    "id": "eeg_chan05_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan10_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan15_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan20_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan25_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan30_10000",
+    "n": 10000,
+    "category": "eeg_10000"
+  },
+  {
+    "id": "eeg_chan05_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan10_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan15_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan20_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan25_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan30_2500",
+    "n": 2500,
+    "category": "eeg_2500"
+  },
+  {
+    "id": "eeg_chan05_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "eeg_chan10_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "eeg_chan15_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "eeg_chan20_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "eeg_chan25_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "eeg_chan30_500",
+    "n": 500,
+    "category": "eeg_500"
+  },
+  {
+    "id": "flights_daily",
+    "n": 7671,
+    "category": "flights"
+  },
+  {
+    "id": "flights_monthly",
+    "n": 252,
+    "category": "flights"
+  },
+  {
+    "id": "flights_weekly",
+    "n": 1095,
+    "category": "flights"
+  },
+  {
+    "id": "nz_tourist_annually",
+    "n": 96,
+    "category": "nz_tourist"
+  },
+  {
+    "id": "nz_tourist_monthly",
+    "n": 1165,
+    "category": "nz_tourist"
+  },
+  {
+    "id": "stock_aapl_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_amzn_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_bac_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_goog_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_intc_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_jpm_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_msft_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_tm_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_tsla_price",
+    "n": 1257,
+    "category": "stock_price"
+  },
+  {
+    "id": "stock_aapl_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_amzn_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_bac_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_goog_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_intc_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_jpm_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_msft_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_tm_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "stock_tsla_volume",
+    "n": 1257,
+    "category": "stock_volume"
+  },
+  {
+    "id": "unemployment_ag",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_business",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_construction",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_edu_health",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_finance",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_govt",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_hospitality",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_info",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_manufacturing",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_mining",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_other",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_self_emp",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_trade",
+    "n": 122,
+    "category": "unemployment"
+  },
+  {
+    "id": "unemployment_transport",
+    "n": 122,
+    "category": "unemployment"
+  }
+]

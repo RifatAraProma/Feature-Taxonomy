@@ -1,4 +1,4 @@
-"""
+﻿"""
 Generate Vega-Lite SVG plots for feature preservation analysis.
 
 Creates plots for each metric showing FC (Feature-Complexity) score analysis:
@@ -528,7 +528,7 @@ def create_algorithm_legend(df, output_dir):
     # Save
     legend_path = output_dir / "algorithm_legend.svg"
     chart.save(str(legend_path))
-    print(f"  ✅ Legend saved: {legend_path.name}")
+    print(f"  OK Legend saved: {legend_path.name}")
 
 
 def save_rankings_to_csv(df, output_dir):
@@ -602,7 +602,7 @@ def save_rankings_to_csv(df, output_dir):
     # Save summary CSV
     summary_path = output_dir / "rankings_summary.csv"
     rankings_summary.to_csv(summary_path, index=False, float_format='%.6f')
-    print(f"  ✅ Summary CSV: {summary_path.name}")
+    print(f"  OK Summary CSV: {summary_path.name}")
     print(f"     ({len(rankings_summary)} rows: {len(metrics)} metrics × algorithms)")
     
     
@@ -643,7 +643,7 @@ def save_rankings_to_csv(df, output_dir):
     # Save wide CSV
     wide_path = output_dir / "rankings_wide.csv"
     rankings_wide.to_csv(wide_path, index=False, float_format='%.6f')
-    print(f"  ✅ Wide CSV: {wide_path.name}")
+    print(f"  OK Wide CSV: {wide_path.name}")
     print(f"     ({len(rankings_wide)} algorithms × {len(metrics)} metrics)")
     
     
@@ -688,11 +688,11 @@ def save_rankings_to_csv(df, output_dir):
     # Save ranked CSV
     ranked_path = output_dir / "rankings_ranked.csv"
     rankings_ranked.to_csv(ranked_path, index=False)
-    print(f"  ✅ Ranked CSV: {ranked_path.name}")
+    print(f"  OK Ranked CSV: {ranked_path.name}")
     print(f"     ({len(rankings_ranked)} algorithms × {len(metrics)} metrics, values=rank positions)")
     
     # Print statistics
-    print(f"\n  📊 Ranking Statistics:")
+    print(f"\n   Ranking Statistics:")
     avg_ranks = rankings_ranked.iloc[:, 1:].mean(axis=1)
     best_algo_idx = avg_ranks.idxmin()
     best_algo_name = rankings_ranked.iloc[best_algo_idx]['algorithm']
@@ -753,30 +753,34 @@ def save_fc_scores_to_csv(df, output_dir):
     fc_path = output_dir / "fc_scores_all.csv"
     fc_df.to_csv(fc_path, index=False, float_format='%.6f')
     
-    print(f"  ✅ FC Scores CSV: {fc_path.name}")
+    print(f"  OK FC Scores CSV: {fc_path.name}")
     print(f"     ({len(fc_df):,} data points: {df['algorithm'].nunique()} algorithms × {df['level'].nunique()} levels × {len(metrics)} metrics)")
     
-    # Calculate and save quartiles
-    p25 = np.percentile(fc_df['fc_score'], 25)
-    p50 = np.percentile(fc_df['fc_score'], 50)
-    p75 = np.percentile(fc_df['fc_score'], 75)
+    # Calculate and save quartiles PER METRIC (not pooled)
+    print(f"\n  Computing quartiles per metric...")
+    quartiles_data = []
     
-    quartiles_df = pd.DataFrame([{
-        'percentile': '25th',
-        'value': p25
-    }, {
-        'percentile': '50th',
-        'value': p50
-    }, {
-        'percentile': '75th',
-        'value': p75
-    }])
+    for metric_name in metrics:
+        metric_fc = fc_df[fc_df['metric'] == metric_name]['fc_score']
+        
+        p25 = np.percentile(metric_fc, 25)
+        p50 = np.percentile(metric_fc, 50)
+        p75 = np.percentile(metric_fc, 75)
+        
+        quartiles_data.append({
+            'metric': metric_name,
+            'q25': p25,
+            'q50': p50,
+            'q75': p75
+        })
+    
+    quartiles_df = pd.DataFrame(quartiles_data)
     
     quartiles_path = output_dir / "fc_scores_quartiles.csv"
     quartiles_df.to_csv(quartiles_path, index=False, float_format='%.6f')
     
-    print(f"  ✅ Quartiles CSV: {quartiles_path.name}")
-    print(f"     25th: {p25:.3f}, 50th: {p50:.3f}, 75th: {p75:.3f}")
+    print(f"  OK Quartiles CSV: {quartiles_path.name}")
+    print(f"     {len(quartiles_df)} metrics with per-metric quartiles (Q1, Q2, Q3)")
     
     return fc_df
 
@@ -990,7 +994,7 @@ def main():
     csv_only_mode = args.csv_only
     
     # Load ALL data (no sampling - we need all algorithms and metrics)
-    print(f"📊 Loading ALL precomputed data for {dataset_name}...")
+    print(f"Loading ALL precomputed data for {dataset_name}...")
     df = load_precomputed_data(dataset_name)  # Load all files
     
     # Create output directory with ranking subdirectory
@@ -999,9 +1003,9 @@ def main():
     
     # If CSV-only mode, just generate CSV files and exit
     if csv_only_mode:
-        print(f"\n💾 CSV-ONLY MODE: Generating FC score CSV files only...")
+        print(f"\nCSV-ONLY MODE: Generating FC score CSV files only...")
         fc_df = save_fc_scores_to_csv(df, output_dir)
-        print(f"\n🎉 Done! CSV files saved to: {output_dir.absolute()}")
+        print(f"\nDone! CSV files saved to: {output_dir.absolute()}")
         return
     
     # Get all unique metrics (excluding change_points l1/linf)
@@ -1009,17 +1013,17 @@ def main():
     
     if breakdown_mode:
         num_plots = len(metrics) * 3
-        print(f"\n🎨 BREAKDOWN MODE: Generating {num_plots} plots for {len(metrics)} metrics...")
+        print(f"\nBREAKDOWN MODE: Generating {num_plots} plots for {len(metrics)} metrics...")
         print(f"   (raw + zscore_fc + ranking for each metric)")
     else:
         num_plots = len(metrics) * 2
-        print(f"\n🎨 STANDARD MODE: Generating {num_plots} plots for {len(metrics)} metrics...")
+        print(f"\nSTANDARD MODE: Generating {num_plots} plots for {len(metrics)} metrics...")
         print(f"   (zscore_fc + ranking for each metric)")
-        print(f"   💡 Use --breakdown flag to include raw scatter plots")
+        print(f"   Use --breakdown flag to include raw scatter plots")
     
     if fc_distribution_mode:
         num_plots += len(metrics)
-        print(f"   📊 FC DISTRIBUTION MODE: Will generate +{len(metrics)} FC distribution plots")
+        print(f"   FC DISTRIBUTION MODE: Will generate +{len(metrics)} FC distribution plots")
         print(f"   Total plots: {num_plots}")
     
     # Generate plots for ALL metrics
@@ -1032,21 +1036,21 @@ def main():
             if raw_chart:
                 raw_path = output_dir / f"{metric_name}_raw.svg"
                 raw_chart.save(str(raw_path))
-                print(f"  ✅ Raw scatter: {raw_path.name}")
+                print(f"  OK Raw scatter: {raw_path.name}")
         
         # Plot 2: Z-score with FC contours (always generated)
         zscore_chart = create_zscore_plot(df, metric_name, dataset_name)
         if zscore_chart:
             zscore_path = output_dir / f"{metric_name}_zscore_fc.svg"
             zscore_chart.save(str(zscore_path))
-            print(f"  ✅ Z-score FC: {zscore_path.name}")
+            print(f"  OK Z-score FC: {zscore_path.name}")
         
         # Plot 3: Ranking (always generated)
         ranking_chart = create_ranking_plot(df, metric_name, dataset_name)
         if ranking_chart:
             ranking_path = output_dir / f"{metric_name}_ranking.svg"
             ranking_chart.save(str(ranking_path))
-            print(f"  ✅ Ranking: {ranking_path.name}")
+            print(f"  OK Ranking: {ranking_path.name}")
         
         # Plot 4: FC distribution (if flag enabled)
         if fc_distribution_mode:
@@ -1055,31 +1059,31 @@ def main():
                 fc_dist_chart, fc_legend = result
                 fc_dist_path = output_dir / f"{metric_name}_fc_distribution.svg"
                 fc_dist_chart.save(str(fc_dist_path))
-                print(f"  ✅ FC Distribution: {fc_dist_path.name}")
+                print(f"  OK FC Distribution: {fc_dist_path.name}")
                 
                 # Save legend only once (for first metric)
                 if i == 1:
                     fc_legend_path = output_dir / "fc_distribution_legend.svg"
                     fc_legend.save(str(fc_legend_path))
-                    print(f"  ✅ FC Legend: {fc_legend_path.name}")
+                    print(f"  OK FC Legend: {fc_legend_path.name}")
     
-    print(f"\n📁 Output directory: {output_dir.absolute()}")
-    print(f"\n✅ ALL PLOTS COMPLETE!")
+    print(f"\nOutput directory: {output_dir.absolute()}")
+    print(f"\nALL PLOTS COMPLETE!")
     print(f"   Generated {num_plots} SVG files for {len(metrics)} metrics")
     
     # Create algorithm legend (single chart showing all algorithm colors)
-    print(f"\n🎨 Creating algorithm color legend...")
+    print(f"\nCreating algorithm color legend...")
     create_algorithm_legend(df, output_dir)
     
     # Save ranking data to CSV files
-    print(f"\n📊 Exporting ranking data to CSV...")
+    print(f"\nExporting ranking data to CSV...")
     save_rankings_to_csv(df, output_dir)
     
     # Save FC scores to CSV (always - for future analysis)
-    print(f"\n💾 Saving FC scores to CSV...")
+    print(f"\nSaving FC scores to CSV...")
     fc_df = save_fc_scores_to_csv(df, output_dir)
     
-    print(f"\n🎉 Done! All plots saved to: {output_dir.absolute()}")
+    print(f"\nDone! All plots saved to: {output_dir.absolute()}")
 
 
 if __name__ == "__main__":

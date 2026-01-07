@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 import numpy as np
+import sys
+sys.path.insert(0, 'server')
+from algorithm_names import get_algorithm_name
 
 def load_detailed_fc_scores():
     """Load FC scores from all datasets"""
@@ -39,21 +42,31 @@ def load_detailed_fc_scores():
 
 
 def categorize_fc_scores(combined_df):
-    """Add rating categories based on dataset-specific quartiles"""
-    quartiles_file = 'plots/dataset_fc_summary.csv'
-    quartiles = pd.read_csv(quartiles_file)
-    quartiles_dict = quartiles.set_index('dataset')[['q25', 'q50', 'q75']].to_dict('index')
+    """Add rating categories based on dataset-metric-specific quartiles"""
+    print("\nCategorizing FC scores into ratings using per-metric quartiles...")
     
-    print("\n📊 Categorizing FC scores into ratings...")
+    # Cache quartiles per dataset to avoid repeated file reads
+    quartiles_cache = {}
     
     def get_rating(row):
         dataset = row['dataset']
+        metric = row['metric']
         fc_score = row['fc_score']
         
-        if dataset not in quartiles_dict:
+        # Load quartiles for this dataset if not cached
+        if dataset not in quartiles_cache:
+            quartiles_file = Path('plots') / dataset / 'ranking' / 'fc_scores_quartiles.csv'
+            if not quartiles_file.exists():
+                return 'unknown'
+            quartiles_df = pd.read_csv(quartiles_file)
+            # Create lookup: {metric: {q25, q50, q75}}
+            quartiles_cache[dataset] = quartiles_df.set_index('metric')[['q25', 'q50', 'q75']].to_dict('index')
+        
+        # Get metric-specific quartiles
+        if metric not in quartiles_cache[dataset]:
             return 'unknown'
         
-        q = quartiles_dict[dataset]
+        q = quartiles_cache[dataset][metric]
         if fc_score > q['q75']:
             return 'excellent'
         elif fc_score > q['q50']:
@@ -73,12 +86,13 @@ def compute_grade_per_dataset_algorithm_metric(df):
     Compute letter grade for each Dataset × Algorithm × Metric combination
     Based on performance for that specific metric only
     
-    Grading scale:
-    - A: Excellent% > 40% OR (Excellent% + Good%) > 70%
-    - B: (Excellent% + Good%) > 50%
-    - C: (Excellent% + Good%) > 30%
-    - D: (Excellent% + Good%) > 15%
-    - F: Otherwise
+    GPA-Style Grading with Equal Ranges (Rating Points: excellent=4, good=3, fair=2, poor=1):
+    Range: 4.0 - 1.0 = 3.0 points, divided equally into 5 grades = 0.6 per grade
+    - A: 3.4 - 4.0 (85-100%)
+    - B: 2.8 - 3.4 (70-85%)
+    - C: 2.2 - 2.8 (55-70%)
+    - D: 1.6 - 2.2 (40-55%)
+    - F: 1.0 - 1.6 (25-40%)
     """
     print("\n📊 Computing grades for Dataset × Algorithm × Metric combinations...")
     
@@ -90,33 +104,35 @@ def compute_grade_per_dataset_algorithm_metric(df):
         if rating not in grouped.columns:
             grouped[rating] = 0
     
-    # Calculate percentages
+    # Calculate GPA-style score
+    rating_points = {'excellent': 4, 'good': 3, 'fair': 2, 'poor': 1}
     total = grouped.sum(axis=1)
-    pct = grouped.div(total, axis=0) * 100
     
-    # Assign grades
-    def assign_grade(row):
-        excellent = row.get('excellent', 0)
-        good = row.get('good', 0)
-        combined = excellent + good
-        
-        if excellent > 40 or combined > 70:
+    # Weighted average: (excellent*4 + good*3 + fair*2 + poor*1) / total
+    scores = (grouped['excellent'] * 4 + grouped['good'] * 3 + 
+              grouped['fair'] * 2 + grouped['poor'] * 1) / total
+    
+    # Assign letter grades based on equal-range GPA scale
+    def assign_grade(score):
+        if score >= 3.4:
             return 'A'
-        elif combined > 50:
+        elif score >= 2.8:
             return 'B'
-        elif combined > 30:
+        elif score >= 2.2:
             return 'C'
-        elif combined > 15:
+        elif score >= 1.6:
             return 'D'
         else:
             return 'F'
     
-    pct['grade'] = pct.apply(assign_grade, axis=1)
-    pct = pct.reset_index()
+    grades_df = grouped.copy()
+    grades_df['score'] = scores
+    grades_df['grade'] = scores.apply(assign_grade)
+    grades_df = grades_df.reset_index()
     
-    print(f"   ✅ Computed {len(pct)} grades")
+    print(f"   ✅ Computed {len(grades_df)} grades")
     
-    return pct
+    return grades_df
 
 
 def compute_grade_per_dataset_algorithm(df):
@@ -124,12 +140,13 @@ def compute_grade_per_dataset_algorithm(df):
     Compute letter grade for each Dataset × Algorithm combination
     Based on average performance across all metrics
     
-    Grading scale:
-    - A: Excellent% > 40% OR (Excellent% + Good%) > 70%
-    - B: (Excellent% + Good%) > 50%
-    - C: (Excellent% + Good%) > 30%
-    - D: (Excellent% + Good%) > 15%
-    - F: Otherwise
+    GPA-Style Grading with Equal Ranges (Rating Points: excellent=4, good=3, fair=2, poor=1):
+    Range: 4.0 - 1.0 = 3.0 points, divided equally into 5 grades = 0.6 per grade
+    - A: 3.4 - 4.0 (85-100%)
+    - B: 2.8 - 3.4 (70-85%)
+    - C: 2.2 - 2.8 (55-70%)
+    - D: 1.6 - 2.2 (40-55%)
+    - F: 1.0 - 1.6 (25-40%)
     """
     print("\n📊 Computing grades for Dataset × Algorithm combinations...")
     
@@ -141,47 +158,50 @@ def compute_grade_per_dataset_algorithm(df):
         if rating not in grouped.columns:
             grouped[rating] = 0
     
-    # Calculate percentages
+    # Calculate GPA-style score
     total = grouped.sum(axis=1)
-    pct = grouped.div(total, axis=0) * 100
+    scores = (grouped['excellent'] * 4 + grouped['good'] * 3 + 
+              grouped['fair'] * 2 + grouped['poor'] * 1) / total
     
-    # Assign grades
-    def assign_grade(row):
-        excellent = row.get('excellent', 0)
-        good = row.get('good', 0)
-        combined = excellent + good
-        
-        if excellent > 40 or combined > 70:
+    # Assign letter grades based on equal-range GPA scale
+    def assign_grade(score):
+        if score >= 3.4:
             return 'A'
-        elif combined > 50:
+        elif score >= 2.8:
             return 'B'
-        elif combined > 30:
+        elif score >= 2.2:
             return 'C'
-        elif combined > 15:
+        elif score >= 1.6:
             return 'D'
         else:
             return 'F'
     
-    pct['grade'] = pct.apply(assign_grade, axis=1)
-    pct = pct.reset_index()
+    grades_df = grouped.copy()
+    grades_df['score'] = scores
+    grades_df['grade'] = scores.apply(assign_grade)
+    grades_df = grades_df.reset_index()
     
-    print(f"   ✅ Computed {len(pct)} grades")
+    print(f"   ✅ Computed {len(grades_df)} grades")
     
-    return pct
+    return grades_df
 
 
 def create_grade_heatmap(grades_df, output_dir='plots/fc_visualizations'):
     """
-    Create a single heatmap: Algorithm × Dataset with letter grades
+    Create a single heatmap: Algorithm × Dataset with letter grades (GREYSCALE)
     """
-    print("\n📊 Creating grade heatmap...")
+    print("\n📊 Creating greyscale grade heatmap...")
+    
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
     
     # Pivot for heatmap (swapped: algorithms on rows, datasets on columns)
     pivot = grades_df.pivot(index='algorithm', columns='dataset', values='grade')
     
     # Convert grades to numeric for color mapping
     grade_map = {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'F': 1}
-    pivot_numeric = pivot.map(lambda x: grade_map.get(x, 0))
+    pivot_numeric = pivot.applymap(lambda x: grade_map.get(x, 0))
     
     # Create figure
     fig, ax = plt.subplots(figsize=(40, 10))
@@ -207,13 +227,13 @@ def create_grade_heatmap(grades_df, output_dir='plots/fc_visualizations'):
     ax.set_xlabel('')
     ax.set_ylabel('')
     ax.set_title('')
-    ax.tick_params(labelsize=16)
+    ax.tick_params(labelsize=22)
     
     # Dataset names at top
     ax.xaxis.tick_top()
     
     # Rotate labels
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='left')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
     
     plt.tight_layout()
@@ -223,7 +243,7 @@ def create_grade_heatmap(grades_df, output_dir='plots/fc_visualizations'):
     output_path.mkdir(exist_ok=True, parents=True)
     
     svg_path = output_path / 'algorithm_grades_by_dataset.svg'
-    png_path = output_path / 'algorithm_grades_by_dataset.png'
+    png_path = output_path / 'algorithm_grades_by_dataset.pdf'
     
     plt.savefig(svg_path, dpi=300, bbox_inches='tight')
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
@@ -244,12 +264,16 @@ def create_grade_heatmap_colored(grades_df, output_dir='plots/fc_visualizations'
     """
     print("\n📊 Creating colored grade heatmap...")
     
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
+    
     # Pivot for heatmap (algorithms on rows, datasets on columns)
     pivot = grades_df.pivot(index='algorithm', columns='dataset', values='grade')
     
     # Convert grades to numeric for color mapping
     grade_map = {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'F': 1}
-    pivot_numeric = pivot.map(lambda x: grade_map.get(x, 0))
+    pivot_numeric = pivot.applymap(lambda x: grade_map.get(x, 0))
     
     # Create figure
     fig, ax = plt.subplots(figsize=(40, 10))
@@ -257,7 +281,7 @@ def create_grade_heatmap_colored(grades_df, output_dir='plots/fc_visualizations'
     # Use frontend color scheme
     # A (excellent) = dark green, B (good) = light green, C (fair) = orange, D = dark orange, F = red
     from matplotlib.colors import ListedColormap
-    colors = ['#E53935', '#FF6F00', '#FFA726', '#66BB6A', '#2E7D32']  # F, D, C, B, A
+    colors = ["#ebfada", '#c2e699','#78c679', '#31a354', '#006837']  # F, D, C, B, A
     cmap = ListedColormap(colors)
     
     sns.heatmap(
@@ -271,8 +295,17 @@ def create_grade_heatmap_colored(grades_df, output_dir='plots/fc_visualizations'
         linecolor='white',
         annot=pivot,  # Show letter grades
         fmt='',
-        annot_kws={'fontsize': 16, 'fontweight': 'bold', 'color': 'white'}
+        annot_kws={'fontsize': 16, 'fontweight': 'bold'}
     )
+    
+    # Manually adjust text colors for better contrast
+    for text in ax.texts:
+        grade = text.get_text()
+        # Use white text for A and B (dark green), black for C, D, F (lighter greens)
+        if grade in ['A', 'B']:
+            text.set_color('white')
+        else:
+            text.set_color('black')
     
     # No titles or axis labels
     ax.set_xlabel('')
@@ -284,7 +317,7 @@ def create_grade_heatmap_colored(grades_df, output_dir='plots/fc_visualizations'
     ax.xaxis.tick_top()
     
     # Rotate labels
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='left')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
     
     plt.tight_layout()
@@ -293,8 +326,8 @@ def create_grade_heatmap_colored(grades_df, output_dir='plots/fc_visualizations'
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True, parents=True)
     
-    svg_path = output_path / 'algorithm_grades_by_dataset_colored.svg'
-    png_path = output_path / 'algorithm_grades_by_dataset_colored.png'
+    svg_path = output_path / 'algorithm_grades_by_dataset_green.svg'
+    png_path = output_path / 'algorithm_grades_by_dataset_green.pdf'
     
     plt.savefig(svg_path, dpi=300, bbox_inches='tight')
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
@@ -309,6 +342,10 @@ def create_grade_distribution_bar(grades_df, output_dir='plots/fc_visualizations
     Bar chart showing grade distribution for each algorithm
     """
     print("\n📊 Creating grade distribution bar chart...")
+    
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
     
     # Count grades per algorithm
     grade_counts = grades_df.groupby(['algorithm', 'grade']).size().unstack(fill_value=0)
@@ -333,7 +370,7 @@ def create_grade_distribution_bar(grades_df, output_dir='plots/fc_visualizations
         kind='bar',
         stacked=True,
         ax=ax,
-        color=['#2ca02c', '#98df8a', '#ffdd57', '#ff7f0e', '#d62728'],
+        color=['#006837', '#31a354', '#78c679', '#c2e699', "#ebfada"],
         width=0.8
     )
     
@@ -351,7 +388,7 @@ def create_grade_distribution_bar(grades_df, output_dir='plots/fc_visualizations
     # Save
     output_path = Path(output_dir)
     svg_path = output_path / 'algorithm_grade_distribution.svg'
-    png_path = output_path / 'algorithm_grade_distribution.png'
+    png_path = output_path / 'algorithm_grade_distribution.pdf'
     
     plt.savefig(svg_path, dpi=300, bbox_inches='tight')
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
@@ -366,6 +403,10 @@ def create_summary_table(grades_df, output_dir='plots/fc_visualizations'):
     Create summary CSV with grade statistics
     """
     print("\n📊 Creating summary statistics...")
+    
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
     
     # Overall grade distribution
     overall = grades_df['grade'].value_counts().sort_index()
@@ -402,12 +443,221 @@ def create_summary_table(grades_df, output_dir='plots/fc_visualizations'):
     return by_algo
 
 
+def compute_average_grade_per_algorithm_metric(grades_df):
+    """
+    Compute average grade for each Algorithm × Metric combination across all datasets
+    Returns a pivot table with algorithms as rows and metrics as columns
+    """
+    print("\n📊 Computing average grades per Algorithm × Metric...")
+    
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
+    
+    # Exclude noise_auc
+    grades_df = grades_df[grades_df['metric'] != 'noise_auc']
+    
+    # Convert grades to numeric
+    grade_map = {'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0}
+    grades_df['grade_value'] = grades_df['grade'].map(grade_map)
+    
+    # Average grade value per algorithm-metric pair across datasets
+    avg_grades = grades_df.groupby(['algorithm', 'metric'])['grade_value'].mean()
+    
+    # Convert back to letter grades
+    def value_to_grade(val):
+        if val >= 3.5:
+            return 'A'
+        elif val >= 2.5:
+            return 'B'
+        elif val >= 1.5:
+            return 'C'
+        elif val >= 0.5:
+            return 'D'
+        else:
+            return 'F'
+    
+    avg_grades_letters = avg_grades.apply(value_to_grade)
+    
+    # Pivot to Algorithm × Metric
+    pivot = avg_grades_letters.unstack()
+    
+    print(f"   ✅ Computed {len(pivot)} algorithms × {len(pivot.columns)} metrics")
+    
+    return pivot, avg_grades.unstack()
+
+
+def create_algorithm_metric_heatmap(grades_df, output_dir='plots/fc_visualizations'):
+    """
+    Create heatmap showing average grade for each Algorithm × Metric combination
+    Similar to variance table layout: algorithms as rows, metrics as columns
+    """
+    print("\n📊 Creating Algorithm × Metric average grade heatmap...")
+    
+    pivot_letters, pivot_values = compute_average_grade_per_algorithm_metric(grades_df)
+    
+    # Define metric ordering by feature groups
+    metric_order = [
+        # Level
+        'level_l1', 'level_linf',
+        # Mean
+        'mean_delta',
+        # Regimes
+        'regimes_delta',
+        # Extrema
+        'extrema_wasserstein', 'extrema_bottleneck',
+        # Spikes & Dips
+        'spikes_dips_wasserstein', 'spikes_dips_bottleneck',
+        # Slope
+        'slope_l1', 'slope_linf',
+        # Curvature
+        'curvature_l1', 'curvature_linf',
+        # Trend
+        'trend_l1', 'trend_linf',
+        # Regression
+        'regression_l1', 'regression_linf',
+        # Periodicity
+        'periodicity_amplitude_delta', 'periodicity_num_periods_delta',
+        # Roughness
+        'roughness_delta',
+        # Noise (exclude AUC)
+        'noise_l1', 'noise_linf'
+    ]
+    
+    # Reorder columns by defined order (only include metrics that exist)
+    existing_metrics = [m for m in metric_order if m in pivot_letters.columns]
+    pivot_letters = pivot_letters.reindex(existing_metrics, axis=1)
+    pivot_values = pivot_values.reindex(existing_metrics, axis=1)
+    
+    # Create display names with proper mathematical notation
+    metric_display_names = {
+        # Level
+        'level_l1': r'Level $\ell_1$',
+        'level_linf': r'Level $\ell_\infty$',
+        # Mean
+        'mean_delta': r'Mean $\delta$',
+        # Regimes
+        'regimes_delta': r'Regimes $\delta$',
+        # Extrema
+        'extrema_wasserstein': r'Extrema $W_1$',
+        'extrema_bottleneck': r'Extrema $W_\infty$',
+        # Spikes & Dips
+        'spikes_dips_wasserstein': r'Spikes & Dips $W_1$',
+        'spikes_dips_bottleneck': r'Spikes & Dips $W_\infty$',
+        # Slope
+        'slope_l1': r'Slope $\ell_1$',
+        'slope_linf': r'Slope $\ell_\infty$',
+        # Curvature
+        'curvature_l1': r'Curvature $\ell_1$',
+        'curvature_linf': r'Curvature $\ell_\infty$',
+        # Trend
+        'trend_l1': r'Trend $\ell_1$',
+        'trend_linf': r'Trend $\ell_\infty$',
+        # Regression
+        'regression_l1': r'Regression $\ell_1$',
+        'regression_linf': r'Regression $\ell_\infty$',
+        # Periodicity
+        'periodicity_amplitude_delta': r'Periodicity Amplitude $\delta$',
+        'periodicity_num_periods_delta': r'Periodicity Periods $\delta$',
+        # Roughness
+        'roughness_delta': r'Roughness $\delta$',
+        # Noise
+        'noise_l1': r'Noise $\ell_1$',
+        'noise_linf': r'Noise $\ell_\infty$'
+    }
+    
+    # Rename columns for display
+    display_columns = [metric_display_names.get(m, m) for m in pivot_letters.columns]
+    pivot_letters_display = pivot_letters.copy()
+    pivot_letters_display.columns = display_columns
+    
+    # Convert grades to numeric for color mapping
+    grade_map = {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'F': 1}
+    pivot_numeric = pivot_letters_display.applymap(lambda x: grade_map.get(x, 0))
+    
+    # Create both greyscale and colored versions
+    for version in ['greyscale', 'colored']:
+        fig, ax = plt.subplots(figsize=(28, 10))
+        
+        if version == 'greyscale':
+            cmap = sns.color_palette(['#2d2d2d', '#525252', '#7a7a7a', '#a8a8a8', '#d6d6d6'], as_cmap=True)
+        else:  # colored
+            from matplotlib.colors import ListedColormap
+            colors = ["#ebfada", '#c2e699','#78c679', '#31a354', '#006837']  # F, D, C, B, A
+            cmap = ListedColormap(colors)
+        
+        sns.heatmap(
+            pivot_numeric,
+            ax=ax,
+            cmap=cmap,
+            vmin=1,
+            vmax=5,
+            cbar=False,
+            linewidths=0.5,
+            linecolor='white',
+            annot=pivot_letters_display,
+            fmt='',
+            annot_kws={'fontsize': 16, 'fontweight': 'bold'}
+        )
+        
+        # Manually adjust text colors for better contrast in colored version
+        if version == 'colored':
+            for text in ax.texts:
+                grade = text.get_text()
+                if grade in ['A', 'B']:
+                    text.set_color('white')
+                else:
+                    text.set_color('black')
+        
+        # No titles
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title('')
+        ax.tick_params(labelsize=22)
+        
+        # Metric names at top
+        ax.xaxis.tick_top()
+        
+        # Rotate labels
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+        
+        plt.tight_layout()
+        
+        # Save
+        output_path = Path(output_dir)
+        output_path.mkdir(exist_ok=True, parents=True)
+        
+        if version == 'greyscale':
+            svg_path = output_path / 'algorithm_metric_average_grades.svg'
+            png_path = output_path / 'algorithm_metric_average_grades.pdf'
+        else:
+            svg_path = output_path / 'algorithm_metric_average_grades_colored.svg'
+            png_path = output_path / 'algorithm_metric_average_grades_colored.pdf'
+        
+        plt.savefig(svg_path, dpi=300, bbox_inches='tight')
+        plt.savefig(png_path, dpi=300, bbox_inches='tight')
+        
+        print(f"   ✅ Saved: {svg_path.name}")
+        
+        plt.close()
+    
+    # Save CSV
+    csv_path = Path(output_dir) / 'algorithm_metric_average_grades.csv'
+    pivot_letters.to_csv(csv_path)
+    print(f"   ✅ Saved: {csv_path.name}")
+
+
 def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_metric'):
     """
     Create separate heatmaps for each of the 23 metrics
     Both greyscale and colored versions
     """
     print("\n📊 Creating per-metric heatmaps...")
+    
+    # Apply display names to algorithms
+    grades_df = grades_df.copy()
+    grades_df['algorithm'] = grades_df['algorithm'].apply(get_algorithm_name)
     
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True, parents=True)
@@ -424,7 +674,7 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
         
         # Pivot: algorithms on rows, datasets on columns
         pivot = metric_df.pivot(index='algorithm', columns='dataset', values='grade')
-        pivot_numeric = pivot.map(lambda x: grade_map.get(x, 0))
+        pivot_numeric = pivot.applymap(lambda x: grade_map.get(x, 0))
         
         # Create both versions
         for version in ['greyscale', 'colored']:
@@ -432,12 +682,10 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
             
             if version == 'greyscale':
                 cmap = sns.color_palette(['#2d2d2d', '#525252', '#7a7a7a', '#a8a8a8', '#d6d6d6'], as_cmap=True)
-                text_color = 'black'
             else:  # colored
                 from matplotlib.colors import ListedColormap
-                colors = ['#E53935', '#FF6F00', '#FFA726', '#66BB6A', '#2E7D32']  # F, D, C, B, A
+                colors = ["#ebfada", '#c2e699','#78c679', '#31a354', '#006837']  # F, D, C, B, A
                 cmap = ListedColormap(colors)
-                text_color = 'white'
             
             sns.heatmap(
                 pivot_numeric,
@@ -450,8 +698,18 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
                 linecolor='white',
                 annot=pivot,
                 fmt='',
-                annot_kws={'fontsize': 16, 'fontweight': 'bold', 'color': text_color}
+                annot_kws={'fontsize': 16, 'fontweight': 'bold'}
             )
+            
+            # Manually adjust text colors for better contrast in colored version
+            if version == 'colored':
+                for text in ax.texts:
+                    grade = text.get_text()
+                    # Use white text for A and B (dark green), black for C, D, F (lighter greens)
+                    if grade in ['A', 'B']:
+                        text.set_color('white')
+                    else:
+                        text.set_color('black')
             
             # No titles or axis labels
             ax.set_xlabel('')
@@ -463,7 +721,7 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
             ax.xaxis.tick_top()
             
             # Rotate labels
-            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='left')
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=90, ha='center')
             ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
             
             plt.tight_layout()
@@ -471,7 +729,7 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
             # Save with metric name
             safe_metric_name = metric.replace('/', '_').replace(' ', '_')
             svg_path = output_path / f'{safe_metric_name}_{version}.svg'
-            png_path = output_path / f'{safe_metric_name}_{version}.png'
+            png_path = output_path / f'{safe_metric_name}_{version}.pdf'
             
             plt.savefig(svg_path, dpi=300, bbox_inches='tight')
             plt.savefig(png_path, dpi=300, bbox_inches='tight')
@@ -485,6 +743,13 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
 
 
 def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Grade algorithm performance')
+    parser.add_argument('--algorithm-metric-avg', action='store_true',
+                       help='Create Algorithm × Metric average grade heatmap')
+    args = parser.parse_args()
+    
     print("=" * 80)
     print("ALGORITHM GRADING SYSTEM")
     print("=" * 80)
@@ -522,6 +787,10 @@ def main():
     # Create per-metric heatmaps (23 metrics × 2 versions = 46 heatmaps)
     create_metric_heatmaps(metric_grades_df)
     
+    # Create Algorithm × Metric average grade heatmap if flag is set
+    if args.algorithm_metric_avg:
+        create_algorithm_metric_heatmap(metric_grades_df)
+    
     print("\n" + "=" * 80)
     print("✅ GRADING COMPLETE!")
     print("=" * 80)
@@ -533,6 +802,10 @@ def main():
     print("  5. algorithm_grade_summary.csv - Summary statistics with GPA")
     print("  6. dataset_algorithm_metric_grades.csv - Grades for each metric separately")
     print(f"  7. by_metric/ - 46 heatmaps (23 metrics × 2 versions each)")
+    if args.algorithm_metric_avg:
+        print("  8. algorithm_metric_average_grades.csv - Average grades per Algorithm × Metric")
+        print("  9. algorithm_metric_average_grades.svg/pdf - Algorithm × Metric heatmap (greyscale)")
+        print("  10. algorithm_metric_average_grades_colored.svg/pdf - Algorithm × Metric heatmap (colored)")
     print("=" * 80)
 
 

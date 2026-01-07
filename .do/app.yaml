@@ -1,0 +1,40 @@
+name: feature-taxonomy
+region: nyc
+
+# Flask Backend
+services:
+  - name: api
+    github:
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    environment_slug: python
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    http_port: 5000
+    run_command: python -m flask --app server.app run --host=0.0.0.0 --port=5000
+    envs:
+      - key: FLASK_APP
+        value: server.app
+      - key: FLASK_ENV
+        value: production
+    routes:
+      - path: /api
+
+# React Frontend
+  - name: web
+    github:
+      branch: main
+      deploy_on_push: true
+    source_dir: /web
+    environment_slug: node-js
+    build_command: npm install && npm run build
+    output_dir: dist
+    routes:
+      - path: /
+
+# Persistent Storage for precomputed data
+storage:
+  - name: precomputed-data
+    path: /data
+    size_gb: 80

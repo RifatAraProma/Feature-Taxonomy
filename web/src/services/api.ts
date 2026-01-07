@@ -4,8 +4,10 @@
  */
 
 import type { FeatureScales } from '../types/scales';
+import { CDN_BASE_URL } from '../config/cdn';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';  // Railway backend URL from environment
+// Deprecated: No longer using Railway backend - fetching everything from CDN
+// const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /**
  * Fetch global feature preservation scales for a dataset
@@ -110,21 +112,22 @@ export async function smoothTimeSeries(request: {
 }
 
 /**
- * Fetch available datasets
+ * Fetch available datasets from CDN
  * @returns Promise resolving to list of dataset IDs
  */
 export async function fetchDatasets(): Promise<string[]> {
   try {
-    console.log(`[API] Fetching available datasets`);
+    console.log(`[API] Fetching available datasets from CDN`);
     
-    const response = await fetch(`${API_BASE}/datasets`);
+    // Fetch from CDN instead of Railway backend
+    const response = await fetch(`${CDN_BASE_URL}/datasets.json`);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log(`[API] ✅ Loaded ${data.length} datasets`);
+    console.log(`[API] ✅ Loaded ${data.length} datasets from CDN`);
     return data;
   } catch (error) {
     console.error(`[API] Error fetching datasets:`, error);

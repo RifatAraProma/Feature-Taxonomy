@@ -213,28 +213,12 @@ def plot_l1_vs_pae_curved_regions(data_points, degree=2):
     ax.plot(pae_smooth, boundaries['good'], 'y-', linewidth=1.5, alpha=0.5, zorder=4)
     ax.plot(pae_smooth, boundaries['fair'], 'orange', linewidth=1.5, alpha=0.5, zorder=4)
     
-    # Algorithm colors from frontend
-    algorithm_color_map = {
-        'gaussian_filter': '#1E88E5',
-        'median_filter': '#039BE5',
-        'mean_filter': '#00ACC1',
-        'min_filter': '#0097A7',
-        'max_filter': '#00897B',
-        'savitzky_golay_filter': '#43A047',
-        'butterworth_filter': '#7CB342',
-        'fft_cutoff_filter': '#a3a80bff',
-        'chebyshev_filter': '#d8bc07ff',
-        'elliptical_filter': '#e5a207ff',
-        'lttb_downsample': '#FB8C00',
-        'm4_downsample': '#F4511E',
-        'rdp_downsample': '#E53935',
-        'minmaxlttb_downsample': '#D81B60',
-        'uniform_subsample': '#8E24AA',
-        'fpcs_downsample': '#5E35B1',
-        'tda_downsample': '#3949AB',
-        'asap_aggregator': '#6D4C41',
-        'bin_average_aggregator': '#8D6E63',
-    }
+    # Algorithm colors from canonical source (server/algorithm_colors.py)
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent / 'server'))
+    from algorithm_colors import ALGORITHM_COLORS
+    algorithm_color_map = ALGORITHM_COLORS
     
     unique_algorithms = sorted(set(algorithms))
     

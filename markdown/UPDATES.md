@@ -46,7 +46,7 @@ The system now includes **81 datasets** organized in the following categories:
 - `m4_downsample`: M4 downsampling
 - `minmaxlttb_downsample`: MinMax LTTB
 - `lttb_downsample`: Largest Triangle Three Buckets
-- `uniform_subsample_downsample`: Uniform subsampling
+- `uniform_subsample`: Uniform subsampling
 - `rdp_downsample`: Ramer-Douglas-Peucker
 - `tda_downsample`: Topological Data Analysis
 - `fpcs_downsample`: Fast Polygonal Chain Simplification
