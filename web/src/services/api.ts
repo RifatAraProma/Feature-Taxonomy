@@ -16,9 +16,10 @@ import { CDN_BASE_URL } from '../config/cdn';
  */
 export async function fetchFeatureScales(datasetId: string): Promise<FeatureScales | null> {
   try {
-    console.log(`[API] Fetching feature scales for dataset: ${datasetId}`);
+    console.log(`[API] Fetching feature scales for dataset: ${datasetId} from CDN`);
     
-    const response = await fetch(`${API_BASE}/precomputed/${datasetId}/feature-scales`);
+    // Fetch from CDN instead of Railway backend
+    const response = await fetch(`${CDN_BASE_URL}/precomputed/${datasetId}/_feature_scales.json`);
     
     console.log(`[API] Feature scales response status: ${response.status}`);
     
@@ -50,23 +51,24 @@ export async function fetchFeatureScales(datasetId: string): Promise<FeatureScal
 }
 
 /**
- * Fetch precomputed algorithm metadata and outputs
+ * Fetch precomputed algorithm metadata and outputs from CDN
  * @param datasetId - The dataset identifier
  * @param algorithm - The algorithm name
  * @returns Promise resolving to algorithm data
  */
 export async function fetchPrecomputedAlgorithm(datasetId: string, algorithm: string): Promise<any> {
   try {
-    console.log(`[API] Fetching precomputed data for ${datasetId}/${algorithm}`);
+    console.log(`[API] Fetching precomputed data for ${datasetId}/${algorithm} from CDN`);
     
-    const response = await fetch(`${API_BASE}/precomputed/${datasetId}/${algorithm}`);
+    // Fetch from CDN instead of Railway backend
+    const response = await fetch(`${CDN_BASE_URL}/precomputed/${datasetId}/${algorithm}_metadata.json`);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log(`[API] ✅ Loaded precomputed data for ${algorithm}`);
+    console.log(`[API] ✅ Loaded precomputed data for ${algorithm} from CDN`);
     return data;
   } catch (error) {
     console.error(`[API] Error fetching precomputed algorithm data:`, error);
@@ -75,7 +77,7 @@ export async function fetchPrecomputedAlgorithm(datasetId: string, algorithm: st
 }
 
 /**
- * Smooth a time series using specified algorithm and parameters
+ * Fetch precomputed smoothed data from CDN (no runtime computation)
  * @param request - Smoothing request parameters
  * @returns Promise resolving to smoothed data and metrics
  */
@@ -88,25 +90,24 @@ export async function smoothTimeSeries(request: {
   params?: Record<string, any>;
 }): Promise<any> {
   try {
-    console.log(`[API] Smoothing time series:`, request);
+    console.log(`[API] Fetching precomputed smoothed data from CDN:`, request);
     
-    const response = await fetch(`${API_BASE}/smooth`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    // Fetch precomputed data from CDN instead of computing at runtime
+    const level = request.sliderLevel ?? 0;
+    const url = `${CDN_BASE_URL}/precomputed/${request.seriesId}/${request.method}_level_${level}.json`;
+    
+    console.log(`[API] Fetching: ${url}`);
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log(`[API] ✅ Smoothing complete`);
+    console.log(`[API] ✅ Loaded precomputed smoothed data from CDN`);
     return data;
   } catch (error) {
-    console.error(`[API] Error smoothing time series:`, error);
+    console.error(`[API] Error fetching precomputed smoothed data:`, error);
     throw error;
   }
 }
