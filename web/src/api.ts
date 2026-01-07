@@ -103,5 +103,36 @@ export async function postSmooth(body: any) {
   if (!r.ok) {
     throw new Error(`Failed to fetch precomputed data: ${r.status} ${r.statusText}`);
   }
-  return r.json();
+  
+  const data = await r.json();
+  
+  // Transform CDN data format to match Flask backend response format
+  // CDN format: {output: [...], pae: number, parameter_name: string, parameter_value: any}
+  // Expected format: {yhat: [{t, y}], banking: {aspect}, metrics: {}, pae: number}
+  
+  let yhat;
+  if (data.output && data.output.length > 0) {
+    if (Array.isArray(data.output[0])) {
+      // Reducer format: [[x, y], [x, y], ...]
+      yhat = data.output.map((pair: [number, number]) => ({t: pair[0] + 1, y: pair[1]}));
+    } else {
+      // Transformer format: [y, y, y, ...]
+      yhat = data.output.map((y: number, idx: number) => ({t: idx + 1, y}));
+    }
+  } else {
+    yhat = [];
+  }
+  
+  return {
+    yhat,
+    banking: { aspect: 1.0 },  // Default aspect ratio for CDN data
+    metrics: {},  // No metrics in CDN files
+    pae: data.pae || null,
+    allFeaturesOrig: {},  // No features in CDN files
+    allFeaturesSimp: {},  // No features in CDN files
+    precomputedInfo: {
+      paramName: data.parameter_name,
+      paramValue: data.parameter_value
+    }
+  };
 }

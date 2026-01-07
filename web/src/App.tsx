@@ -48,6 +48,21 @@ export default function App(){
           return;
         }
         
+        // Check if using CDN (no allOutputs, fetch on-demand) or local backend (has allOutputs)
+        if (data.useCDN) {
+          console.log('[PRECOMPUTED] ✓ Using CDN mode (on-demand loading)');
+          // CDN mode: Don't preload all levels, fetch on-demand when slider moves
+          setPrecomputedCache(null);  // No cache for CDN mode
+          setPrecomputedInfo({
+            available: true,
+            numLevels: data.numLevels,
+            useCDN: true,
+            parameterInfo: null  // Will be set when first level is fetched
+          });
+          setPaeValue(null);
+          return;
+        }
+        
         console.log(`[PRECOMPUTED] ✓ Loaded ${data.numLevels} levels`);
         console.log(`[PRECOMPUTED] Backend paramName:`, data.paramName);
         console.log(`[PRECOMPUTED] First level data:`, data.allOutputs[0]);
@@ -274,6 +289,12 @@ export default function App(){
           value: cached.paramValue
         }
       }));
+      return;
+    }
+    
+    // For CDN mode or when no orig data loaded yet, skip
+    if (!orig || orig.length === 0) {
+      console.log('[PRECOMPUTED] Waiting for original data to load');
       return;
     }
     
