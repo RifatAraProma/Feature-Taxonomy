@@ -48,7 +48,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('stock_price');
   const [selectedDataset, setSelectedDataset] = useState<string>('stock_aapl_price');
   const [selectedMetric, setSelectedMetric] = useState('level_l1');
-  const [viewMode, setViewMode] = useState<'ranking' | 'zscore' | 'both'>('both');
+  const [viewMode, setViewMode] = useState<'ranking' | 'zscore' | 'both' | 'raw' | 'distribution'>('both');
   const [showLegend, setShowLegend] = useState(true);
   const [showAllRanks, setShowAllRanks] = useState(false);
 
@@ -116,10 +116,10 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
           backgroundColor: '#fff'
         }}>
           <h2 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 600, color: '#333' }}>
-            📊 Plots Gallery
+            📊 Algorithm Performance
           </h2>
           <p style={{ margin: 0, fontSize: 11, color: '#666', lineHeight: 1.4 }}>
-            Compare algorithm performance across metrics
+            Z-score placement and grade-based algorithm rankings
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             </label>
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both')}
+              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both' | 'raw' | 'distribution')}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -254,9 +254,11 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
                 backgroundColor: '#fff'
               }}
             >
-              <option value="both">Both Plots</option>
+              <option value="both">Ranking + Z-Score</option>
               <option value="ranking">Ranking Only</option>
               <option value="zscore">Z-Score Only</option>
+              <option value="raw">Raw Values</option>
+              <option value="distribution">Grade Distribution</option>
             </select>
           </div>
         )}
@@ -454,7 +456,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             flex: 1,
             padding: 16,
             display: 'grid',
-            gridTemplateColumns: viewMode === 'both' ? '1fr 1fr 400px' : viewMode === 'ranking' ? '1fr 400px' : '1fr 400px',
+            gridTemplateColumns: viewMode === 'both' ? '1fr 1fr 400px' : (viewMode === 'raw' || viewMode === 'distribution') ? '1fr 400px' : '1fr 400px',
             gap: 16,
             alignItems: 'start',
             alignContent: 'start'
@@ -545,6 +547,92 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             </div>
           )}
 
+          {/* Raw Values Plot */}
+          {viewMode === 'raw' && (
+            <div style={{
+              backgroundColor: '#fff',
+              borderRadius: 4,
+              padding: 16,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              height: '600px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#333' }}>
+                📊 Raw Values
+              </h3>
+              <img
+                src={getPath(`${selectedMetric}_raw.svg`)}
+                alt={`Raw values plot for ${selectedMetric}`}
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = 'none';
+                  const parent = img.parentElement;
+                  if (parent) {
+                    const error = document.createElement('div');
+                    error.style.padding = '60px 20px';
+                    error.style.textAlign = 'center';
+                    error.style.color = '#999';
+                    error.innerHTML = `
+                      <p style="margin: 0; font-size: 14px;">📊 Plot not found</p>
+                      <p style="margin: 8px 0 0 0; font-size: 12px;">Run generate_vegalite_plots.py to create plots</p>
+                    `;
+                    parent.appendChild(error);
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* Grade Distribution Plot */}
+          {viewMode === 'distribution' && (
+            <div style={{
+              backgroundColor: '#fff',
+              borderRadius: 4,
+              padding: 16,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              height: '600px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#333' }}>
+                🎯 Grade Distribution (Excellent/Good/Fair/Poor)
+              </h3>
+              <img
+                src={getPath(`${selectedMetric}_fc_distribution.svg`)}
+                alt={`Grade distribution for ${selectedMetric}`}
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = 'none';
+                  const parent = img.parentElement;
+                  if (parent) {
+                    const error = document.createElement('div');
+                    error.style.padding = '60px 20px';
+                    error.style.textAlign = 'center';
+                    error.style.color = '#999';
+                    error.innerHTML = `
+                      <p style="margin: 0; font-size: 14px;">🎯 Plot not found</p>
+                      <p style="margin: 8px 0 0 0; font-size: 12px;">Run generate_vegalite_plots.py to create plots</p>
+                    `;
+                    parent.appendChild(error);
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* Legend - Always visible in single metric view */}
           <div style={{
             backgroundColor: '#fff',
@@ -587,57 +675,6 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             />
           </div>
         </div>
-        )}
-
-        {/* Help Text - Only show when not in all ranks mode */}
-        {!showAllRanks && (
-          <div style={{
-            margin: 16,
-            marginTop: 0,
-            padding: 16,
-            backgroundColor: '#fff',
-            borderRadius: 4,
-            fontSize: 12,
-            color: '#666',
-            lineHeight: 1.6,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ fontSize: 13, color: '#333' }}>📖 How to Read These Charts</strong>
-            </div>
-            
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#1E88E5' }}>📊 Algorithm Ranking (Left)</strong>
-              <ul style={{ margin: '4px 0 0 0', paddingLeft: 20 }}>
-                <li><strong>FC Score</strong> = Feature-Complexity Score = (Feature_z) - (PAE_z)</li>
-                <li><strong>Higher is better:</strong> Good feature preservation with low visual complexity</li>
-                <li><strong>Numbers on bars:</strong> Mean FC score across all 101 levels</li>
-                <li><strong>Error bars:</strong> Standard deviation showing consistency</li>
-                <li><strong>Top algorithms:</strong> Best tradeoff between preservation and simplicity</li>
-              </ul>
-            </div>
-            
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#FB8C00' }}>📈 Z-Score Breakdown (Right)</strong>
-              <ul style={{ margin: '4px 0 0 0', paddingLeft: 20 }}>
-                <li><strong>X-axis (PAE Z-Score):</strong> Visual complexity (left = simpler, right = complex)</li>
-                <li><strong>Y-axis (Feature Z-Score):</strong> Feature preservation quality</li>
-                <li><strong>Each dot:</strong> One smoothing level (101 levels × 19 algorithms)</li>
-                <li><strong>Ideal region:</strong> Bottom-left quadrant (low PAE, high preservation)</li>
-                <li><strong>Red lines:</strong> Reference at z=0 (mean values)</li>
-              </ul>
-            </div>
-            
-            <div style={{ 
-              padding: 10, 
-              backgroundColor: '#E3F2FD', 
-              borderLeft: '3px solid #1E88E5',
-              borderRadius: 4,
-              fontSize: 11
-            }}>
-              <strong style={{ color: '#1565C0' }}>💡 Pro Tip:</strong> Compare the same metric across datasets to see how algorithm performance varies with data characteristics. Algorithms with small error bars are more consistent across different smoothing levels.
-            </div>
-          </div>
         )}
       </div>
     </div>

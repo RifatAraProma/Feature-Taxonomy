@@ -374,7 +374,7 @@ export default function App(){
                 transition: 'all 0.2s'
               }}
             >
-              📊 Plots Gallery
+              📊 Algorithm Performance
             </button>
             <button
               onClick={() => setActiveTab('original')}
