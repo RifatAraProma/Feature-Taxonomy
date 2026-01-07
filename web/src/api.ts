@@ -26,7 +26,10 @@ export async function getSeries(id: string) {
   
   // Try to infer category from dataset name
   for (const cat of categories) {
-    if (id.startsWith(cat) || id.includes(cat.replace(/_/g, '_'))) {
+    // Check if the dataset name contains the category
+    // e.g., "stock_aapl_price" contains "stock" or "stock_price"
+    const catBase = cat.split('_')[0]; // Get base name (e.g., "stock" from "stock_price")
+    if (id.startsWith(catBase)) {
       try {
         const cdnUrl = `${CDN_BASE_URL}/data/${cat}/${id}.json`;
         console.log(`[API] Fetching series from CDN: ${cdnUrl}`);
