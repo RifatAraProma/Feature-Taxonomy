@@ -5,7 +5,7 @@
 
 import type { FeatureScales } from '../types/scales';
 
-const API_BASE = '';  // Use relative path for Vite proxy
+const API_BASE = import.meta.env.VITE_API_URL || '';  // Use Railway URL in production, relative path for dev
 
 /**
  * Fetch global feature preservation scales for a dataset
