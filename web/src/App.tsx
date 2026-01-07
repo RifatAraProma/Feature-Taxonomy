@@ -5,7 +5,6 @@ import ChartPanel from './components/ChartPanel'
 import MetricsBar from './components/MetricsBar'
 import PlotsGallery from './components/PlotsGallery'
 import OriginalPlotsGallery from './components/OriginalPlotsGallery'
-import PrecomputedPlotsGallery from './components/PrecomputedPlotsGallery'
 import RankingsViewer from './components/RankingsViewer'
 import GradingPlotsGallery from './components/GradingPlotsGallery'
 import PaperFiguresGallery from './components/PaperFiguresGallery'
@@ -13,7 +12,7 @@ import { getSeries, postSmooth, getPrecomputedInfo } from './api'
 import { getAlgorithmColor } from './constants/algorithmColors'
 
 export default function App(){
-  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'pae' | 'rankings' | 'grading' | 'paper'>('explorer')
+  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'rankings' | 'grading' | 'paper'>('explorer')
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
@@ -394,22 +393,6 @@ export default function App(){
               📈 Original Data
             </button>
             <button
-              onClick={() => setActiveTab('pae')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                borderBottom: activeTab === 'pae' ? '3px solid #1E88E5' : '3px solid transparent',
-                backgroundColor: activeTab === 'pae' ? '#E3F2FD' : 'transparent',
-                color: activeTab === 'pae' ? '#1E88E5' : '#666',
-                fontSize: 14,
-                fontWeight: activeTab === 'pae' ? 600 : 400,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              📉 PAE Analysis
-            </button>
-            <button
               onClick={() => setActiveTab('rankings')}
               style={{
                 padding: '10px 20px',
@@ -474,8 +457,6 @@ export default function App(){
           <PlotsGallery />
         ) : activeTab === 'original' ? (
           <OriginalPlotsGallery />
-        ) : activeTab === 'pae' ? (
-          <PrecomputedPlotsGallery />
         ) : activeTab === 'grading' ? (
           <GradingPlotsGallery />
         ) : activeTab === 'paper' ? (
