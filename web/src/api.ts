@@ -1,7 +1,14 @@
 import { getPrecomputedUrl, CDN_BASE_URL } from './config/cdn';
 
 // Detect if running locally (development) or in production
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Allow forcing CDN mode locally via ?forceCDN=true URL parameter for testing
+const urlParams = new URLSearchParams(window.location.search);
+const forceCDN = urlParams.get('forceCDN') === 'true';
+const isLocal = !forceCDN && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+if (forceCDN) {
+  console.log('🔧 [DEV] Forcing CDN mode for local testing');
+}
 
 export async function getDatasets() {
   // Local: use Flask backend via Vite proxy
