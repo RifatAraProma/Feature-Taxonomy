@@ -2,10 +2,7 @@
 export const CDN_BASE_URL = import.meta.env.VITE_CDN_URL || 'https://feature-taxonomy-precomputed.sfo3.cdn.digitaloceanspaces.com';
 
 // Detect if running locally
-// Allow forcing CDN mode locally via ?forceCDN=true URL parameter for testing
-const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-const forceCDN = urlParams?.get('forceCDN') === 'true';
-const isLocal = !forceCDN && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 export const CDN_URLS = {
   precomputed: `${CDN_BASE_URL}/precomputed`,
