@@ -335,10 +335,10 @@ export default function App(){
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
             <div>
               <h1 style={{margin: 0, fontSize: 24, fontWeight: 600, color: '#333'}}>
-                Temporal Data Feature Taxonomy
+                How to Simplify a Line Chart: A Visual Feature-Based Taxonomy and Evaluation
               </h1>
               <p style={{margin: '4px 0 0 0', fontSize: 14, color: '#666'}}>
-                Explore and analyze time series data with various algorithms
+                Interactive exploration of simplification algorithms and their visual feature preservation
               </p>
             </div>
           </div>
