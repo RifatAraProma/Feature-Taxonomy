@@ -577,88 +577,31 @@ export default function MetricsBar({metrics, datasetId}:{metrics:any, datasetId:
           color: '#333'
         }}>
           <div style={{fontWeight: 700, fontSize: 15, marginBottom: 8, color: '#FF1493'}}>
-            📊 How Quality Thresholds Are Calculated
+            📊 How Quality Scales Work
           </div>
           <p style={{margin: '0 0 12px 0'}}>
-            The <strong>Excellent/Good/Fair/Poor</strong> categories are calculated using <strong>percentile-based statistical analysis</strong> on real algorithm performance:
+            The <strong>Excellent/Good/Fair/Poor</strong> colored bars show how the <strong>current simplification level</strong> compares to <strong>all techniques × 100 levels for this dataset</strong> (~1,900 data points):
           </p>
-          <ol style={{margin: '0 0 12px 0', paddingLeft: 24}}>
+          <ul style={{margin: '0 0 12px 0', paddingLeft: 24}}>
             <li style={{marginBottom: 6}}>
-              <strong>Massive dataset collection:</strong> We run all ~19 algorithms at 100 smoothing levels each → <strong>~24,700 metric samples</strong> per dataset
+              <strong style={{color: '#2E7D32'}}>Excellent</strong> = This level is in the <strong>top 25%</strong> (best quartile) across all algorithms and levels
             </li>
             <li style={{marginBottom: 6}}>
-              <strong>Statistical analysis:</strong> For each metric (like L¹ error), we sort all values and calculate percentiles:
-              <ul style={{marginTop: 4, marginLeft: 16}}>
-                <li><strong style={{color: '#2E7D32'}}>Excellent</strong> = ≤ 25th percentile (top 25% of algorithms)</li>
-                <li><strong style={{color: '#66BB6A'}}>Good</strong> = ≤ 50th percentile (better than median)</li>
-                <li><strong style={{color: '#FFA726'}}>Fair</strong> = ≤ 75th percentile (better than worst 25%)</li>
-                <li><strong style={{color: '#E53935'}}>Poor</strong> = &gt; 75th percentile (bottom 25%)</li>
-              </ul>
+              <strong style={{color: '#66BB6A'}}>Good</strong> = Better than <strong>50%</strong> of all algorithm-level combinations (above median)
             </li>
             <li style={{marginBottom: 6}}>
-              <strong>Example:</strong> For stock_aapl_price L¹ metric, "Excellent" means error ≤ 1.599 because that's what the top 25% of smoothing operations achieved
+              <strong style={{color: '#FFA726'}}>Fair</strong> = Better than <strong>25%</strong> of all algorithm-level combinations (third quartile)
             </li>
-          </ol>
-          <div style={{
-            marginTop: 12,
-            padding: '8px 12px',
-            backgroundColor: '#fff',
-            borderRadius: 6,
-            fontSize: 12,
-            fontStyle: 'italic',
-            border: '1px solid #FF149330'
-          }}>
-            ✅ <strong>Why this works:</strong> Thresholds are data-driven (not arbitrary), dataset-specific, and based on what algorithms actually achieve across ~25,000 real smoothing operations.
-          </div>
+            <li style={{marginBottom: 6}}>
+              <strong style={{color: '#E53935'}}>Poor</strong> = In the <strong>bottom 25%</strong> (worst quartile)
+            </li>
+          </ul>
         </div>
       )}
       
       {/* Feature Preservation Metrics */}
       {Object.keys(featurePreservation).length > 0 ? (
         <div>
-          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12}}>
-            <button
-              onClick={() => setActiveToast(activeToast === 'feature' ? null : 'feature')}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                color: '#2196F3',
-                fontSize: 16
-              }}
-              title="Click for more info"
-            >
-              ℹ️
-            </button>
-          </div>
-          
-          {/* Toast for Feature Preservation Metrics */}
-          {activeToast === 'feature' && (
-            <div style={{
-              marginBottom: 12,
-              padding: '12px 16px',
-              backgroundColor: '#E3F2FD',
-              border: '1px solid #2196F3',
-              borderRadius: 8,
-              fontSize: 13,
-              lineHeight: 1.6,
-              color: '#0D47A1'
-            }}>
-              <strong>Feature Preservation Metrics</strong> measure how well the simplified series maintains important visual features of the original:
-              <ul style={{margin: '8px 0 0 0', paddingLeft: 20}}>
-                <li><strong>Retention:</strong> Percentage of features retained (e.g., extrema, change points)</li>
-                <li><strong>Correlation:</strong> How similar feature values are between original and simplified</li>
-                <li><strong>Error/MAE:</strong> Average difference in feature locations or magnitudes</li>
-                <li><strong>Ratio:</strong> Ratio of simplified to original feature values</li>
-              </ul>
-              <div style={{marginTop: 8, fontSize: 12, fontStyle: 'italic'}}>
-                Higher values are better for retention/correlation. Lower values are better for errors. Ratios close to 1.0 indicate good preservation.
-              </div>
-            </div>
-          )}
           
           {/* Grouped Feature Metrics */}
           {Object.entries(groupedFeatureMetrics).map(([featureName, featureMetrics], index) => {

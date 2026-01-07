@@ -74,7 +74,7 @@ export default function Controls(p: Props) {
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}>
-          Algorithm
+          Simplification Techniques
         </h3>
         <select 
           value={p.method} 
@@ -89,29 +89,23 @@ export default function Controls(p: Props) {
             cursor: 'pointer'
           }}
         >
-          <optgroup label="Window-Based Filters">
-            <option value="mean_filter">Mean Filter (sliding window average)</option>
-            <option value="median_filter">Median Filter (removes spikes)</option>
-            <option value="min_filter">Min Filter (local minima)</option>
-            <option value="max_filter">Max Filter (local maxima)</option>
-            <option value="savitzky_golay_filter">Savitzky-Golay Filter (polynomial fitting)</option>
-          </optgroup>
-          <optgroup label="Convolution-Based Filters">
+          <optgroup label="Transformers">
+            <option value="mean_filter">Mean Filter</option>
+            <option value="median_filter">Median Filter</option>
+            <option value="min_filter">Min Filter</option>
+            <option value="max_filter">Max Filter</option>
+            <option value="savitzky_golay_filter">Savitzky-Golay Filter</option>
             <option value="gaussian_filter">Gaussian Filter</option>
+            <option value="fft_cutoff_filter">FFT Cutoff Filter</option>
+            <option value="butterworth_filter">Butterworth Filter</option>
+            <option value="chebyshev_filter">Chebyshev Filter</option>
+            <option value="elliptical_filter">Elliptical Filter</option>
           </optgroup>
-          <optgroup label="Frequency-Domain Filters">
-            <option value="fft_cutoff_filter">FFT Cutoff Filter (frequency window)</option>
-          </optgroup>
-          <optgroup label="IIR Filters">
-            <option value="butterworth_filter">Butterworth Filter (smooth transition)</option>
-            <option value="chebyshev_filter">Chebyshev Filter (steep rolloff)</option>
-            <option value="elliptical_filter">Elliptical (Cauer) Filter (steepest rolloff)</option>
-          </optgroup>
-          <optgroup label="Reducers (Downsamplers)">
-            <option value="lttb_downsample">LTTB </option>
+          <optgroup label="Reducers">
+            <option value="lttb_downsample">LTTB</option>
             <option value="m4_downsample">M4</option>
             <option value="minmaxlttb_downsample">MinMaxLTTB</option>
-            <option value="rdp_downsample">RDP (Douglas-Peucker)</option>
+            <option value="rdp_downsample">RDP</option>
             <option value="uniform_subsample">Uniform Subsample</option>
             <option value="fpcs_downsample">FPCS</option>
             <option value="tda_downsample">TopoLines</option>

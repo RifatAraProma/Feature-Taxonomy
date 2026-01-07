@@ -338,7 +338,7 @@ export default function App(){
                 How to Simplify a Line Chart: A Visual Feature-Based Taxonomy and Evaluation
               </h1>
               <p style={{margin: '4px 0 0 0', fontSize: 14, color: '#666'}}>
-                Interactive exploration of simplification algorithms and their visual feature preservation
+                Interactive exploration of simplification techniques and their visual feature preservation
               </p>
             </div>
           </div>
