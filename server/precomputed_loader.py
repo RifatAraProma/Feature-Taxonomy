@@ -13,12 +13,16 @@ Each JSON contains: {level, parameter_name, parameter_value, output_length, outp
 """
 
 import json
+import os
 from pathlib import Path
 
 class PrecomputedLoader:
     def __init__(self, precomputed_dir='precomputed'):
+        # Check for production environment variable first
+        if os.getenv('PRECOMPUTED_DATA_PATH'):
+            self.precomputed_dir = Path(os.getenv('PRECOMPUTED_DATA_PATH'))
         # Handle relative path from server directory
-        if not Path(precomputed_dir).is_absolute():
+        elif not Path(precomputed_dir).is_absolute():
             # Assume running from server directory, so go up one level
             self.precomputed_dir = Path(__file__).parent.parent / precomputed_dir
         else:

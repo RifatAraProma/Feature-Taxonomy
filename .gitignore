@@ -71,6 +71,9 @@ Thumbs.db
 
 precomputed
 plots
+plots_level_*
+
+web/src/figures/Visual features
 
 # --- External libraries ---
 LineSmooth-master/

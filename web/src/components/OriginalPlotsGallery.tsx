@@ -163,7 +163,7 @@ export default function OriginalPlotsGallery() {
                 overflow: 'hidden'
               }}>
                 <img
-                  src={`/plots/original/${dataset.name}.svg`}
+                  src={getPlotUrl(`original/${dataset.name}.svg`)}
                   alt={dataset.name}
                   style={{
                     width: '100%',

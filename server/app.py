@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from .util import list_datasets, load_series
 from .banking import median_slope_aspect
 from .features.pae import get_pae as pae
@@ -34,6 +35,7 @@ def extract_y_values(data):
     return data
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes to allow CDN access
 
 @app.route("/datasets", methods=["GET"])
 def datasets():
@@ -417,14 +419,14 @@ def spectral(sid):
 @app.route("/plots/<dataset_name>/<path:filepath>")
 def serve_plot(dataset_name, filepath):
     """
-    Serve generated plot SVG files.
+    Serve generated plot files (SVG or PDF).
     
     Args:
-        dataset_name: Name of the dataset (e.g., 'stock_aapl_price')
-        filepath: Path to SVG file (e.g., 'ranking/level_l1_ranking.svg' or 'algorithm_legend.svg')
+        dataset_name: Name of the dataset (e.g., 'stock_aapl_price' or 'paper  figures')
+        filepath: Path to file (e.g., 'ranking/level_l1_ranking.svg' or 'Fig 5 a.pdf')
     
     Returns:
-        SVG file content
+        SVG or PDF file content
     """
     from flask import send_file, abort
     import os
@@ -441,8 +443,18 @@ def serve_plot(dataset_name, filepath):
         print(f"[PLOTS] ERROR: File not found at {plot_path}")
         abort(404, description=f"Plot not found: {dataset_name}/{filepath}")
     
-    print(f"[PLOTS] Serving: {plot_path}")
-    return send_file(str(plot_path), mimetype='image/svg+xml')
+    # Determine MIME type based on file extension
+    if filepath.endswith('.pdf'):
+        mimetype = 'application/pdf'
+    elif filepath.endswith('.svg'):
+        mimetype = 'image/svg+xml'
+    elif filepath.endswith('.png'):
+        mimetype = 'image/png'
+    else:
+        mimetype = 'application/octet-stream'
+    
+    print(f"[PLOTS] Serving: {plot_path} as {mimetype}")
+    return send_file(str(plot_path), mimetype=mimetype)
 
 @app.route("/precomputed/<dataset_name>/plots/<filename>")
 def serve_precomputed_plot(dataset_name, filename):

@@ -7,11 +7,13 @@ import PlotsGallery from './components/PlotsGallery'
 import OriginalPlotsGallery from './components/OriginalPlotsGallery'
 import PrecomputedPlotsGallery from './components/PrecomputedPlotsGallery'
 import RankingsViewer from './components/RankingsViewer'
+import GradingPlotsGallery from './components/GradingPlotsGallery'
+import PaperFiguresGallery from './components/PaperFiguresGallery'
 import { getSeries, postSmooth, getPrecomputedInfo } from './api'
 import { getAlgorithmColor } from './constants/algorithmColors'
 
 export default function App(){
-  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'pae' | 'rankings'>('explorer')
+  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'pae' | 'rankings' | 'grading' | 'paper'>('explorer')
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
@@ -423,6 +425,38 @@ export default function App(){
             >
               🏆 Rankings
             </button>
+            <button
+              onClick={() => setActiveTab('grading')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'grading' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'grading' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'grading' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'grading' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📊 Grading Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('paper')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'paper' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'paper' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'paper' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'paper' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📄 Paper Figures
+            </button>
           </div>
         </div>
 
@@ -442,6 +476,10 @@ export default function App(){
           <OriginalPlotsGallery />
         ) : activeTab === 'pae' ? (
           <PrecomputedPlotsGallery />
+        ) : activeTab === 'grading' ? (
+          <GradingPlotsGallery />
+        ) : activeTab === 'paper' ? (
+          <PaperFiguresGallery />
         ) : (
           <RankingsViewer />
         )}

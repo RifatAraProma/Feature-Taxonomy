@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { getAlgorithmColor } from '../constants/algorithmColors'
 import { getAlgorithmName } from '../constants/algorithmNames'
+import { CDN_URLS } from '../config/cdn'
 
 interface Dataset {
   id: string
@@ -260,7 +261,7 @@ export default function PrecomputedPlotsGallery() {
                     minHeight: 200
                   }}>
                     <img
-                      src={`/precomputed/${selectedDataset}/plots/${algorithm}_level_vs_pae.png`}
+                      src={`${CDN_URLS.precomputed}/${selectedDataset}/plots/${algorithm}_level_vs_pae.png`}
                       alt={`${algorithmName} level vs PAE`}
                       style={{
                         width: '100%',

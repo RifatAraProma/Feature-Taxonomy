@@ -95,7 +95,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   };
 
   // Base path for plots - now in ranking subdirectory
-  const basePath = `/plots/${selectedDataset}/ranking`;
+  const getPath = (filename: string) => getPlotUrl(`${selectedDataset}/ranking/${filename}`);
 
   return (
     <div style={{ height: '100%', display: 'flex' }}>
@@ -413,7 +413,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
                         {metric}
                       </h5>
                       <img
-                        src={`${basePath}/${metric}_ranking.svg`}
+                        src={getPath(`${metric}_ranking.svg`)}
                         alt={`Ranking plot for ${metric}`}
                         style={{ 
                           width: '100%', 
@@ -473,7 +473,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
                 📊 Algorithm Ranking
               </h3>
               <img
-                src={`${basePath}/${selectedMetric}_ranking.svg`}
+                src={getPath(`${selectedMetric}_ranking.svg`)}
                 alt={`Ranking plot for ${selectedMetric}`}
                 style={{ 
                   width: '100%', 
@@ -516,7 +516,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
                 📈 Z-Score Breakdown
               </h3>
               <img
-                src={`${basePath}/${selectedMetric}_zscore_fc.svg`}
+                src={getPath(`${selectedMetric}_zscore_fc.svg`)}
                 alt={`Z-score plot for ${selectedMetric}`}
                 style={{ 
                   width: '100%', 
@@ -559,7 +559,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
               🎨 Algorithm Legend
             </h3> */}
             <img
-              src={`${basePath}/algorithm_legend.svg`}
+              src={getPath('algorithm_legend.svg')}
               alt="Algorithm Color Legend"
               style={{ 
                 maxWidth: '100%', 

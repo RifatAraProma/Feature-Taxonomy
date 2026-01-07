@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { getPlotUrl } from '../config/cdn';
 
 export default function RankingsViewer() {
   const [rankingType, setRankingType] = useState<'dataset_type' | 'feature' | 'category' | 'density' | 'periodic' | 'global'>('dataset_type')
@@ -80,17 +81,17 @@ export default function RankingsViewer() {
     if (!selectedView) return null
 
     if (rankingType === 'global') {
-      return '/plots/global_ranking/global_bump_chart.svg'
+      return getPlotUrl('global_ranking/global_bump_chart.svg')
     } else if (rankingType === 'category') {
-      return `/plots/category_rankings/${selectedView}_bump_chart.svg`
+      return getPlotUrl(`category_rankings/${selectedView}_bump_chart.svg`)
     } else if (rankingType === 'dataset_type') {
-      return `/plots/dataset_type_rankings/${selectedView}_bump_chart.svg`
+      return getPlotUrl(`dataset_type_rankings/${selectedView}_bump_chart.svg`)
     } else if (rankingType === 'feature') {
-      return `/plots/feature_rankings/${selectedView}_bump_chart.svg`
+      return getPlotUrl(`feature_rankings/${selectedView}_bump_chart.svg`)
     } else if (rankingType === 'density') {
-      return `/plots/density_rankings/${selectedView}_bump_chart.svg`
+      return getPlotUrl(`density_rankings/${selectedView}_bump_chart.svg`)
     } else if (rankingType === 'periodic') {
-      return `/plots/periodic_rankings/${selectedView}_bump_chart.svg`
+      return getPlotUrl(`periodic_rankings/${selectedView}_bump_chart.svg`)
     }
     return null
   }
