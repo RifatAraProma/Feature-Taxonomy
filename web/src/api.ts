@@ -18,36 +18,22 @@ export async function getSeries(id: string) {
     return r.json();
   }
   
-  // Production: fetch from CDN
-  try {
-    const cdnUrl = `${CDN_BASE_URL}/data/${id}.json`;
-    console.log(`[API] Fetching series from CDN: ${cdnUrl}`);
-    const r = await fetch(cdnUrl);
-    if (r.ok) {
-      const data = await r.json();
-      // Handle both formats: {y: [...]} or just [...]
-      if (Array.isArray(data)) {
-        return { id, y: data };
-      }
-      return data;
-    }
-  } catch (e) {
-    console.warn(`[API] CDN fetch failed`);
-  }
-  
-  // Fallback: Try to infer category and fetch from CDN with category path
+  // Production: fetch from CDN with category path
+  // All files are stored as data/{category}/{dataset}.json
   const categories = ['astro', 'chi_homicide', 'climate_awnd', 'climate_prcp', 'climate_tmax', 
                       'eeg_10000', 'eeg_2500', 'eeg_500', 'flights', 'nz_tourist', 
                       'stock_price', 'stock_volume', 'unemployment'];
   
+  // Try to infer category from dataset name
   for (const cat of categories) {
-    if (id.startsWith(cat) || id.includes(cat)) {
+    if (id.startsWith(cat) || id.includes(cat.replace(/_/g, '_'))) {
       try {
         const cdnUrl = `${CDN_BASE_URL}/data/${cat}/${id}.json`;
-        console.log(`[API] Trying CDN with category: ${cdnUrl}`);
+        console.log(`[API] Fetching series from CDN: ${cdnUrl}`);
         const r = await fetch(cdnUrl);
         if (r.ok) {
           const data = await r.json();
+          // Handle both formats: {y: [...]} or just [...]
           if (Array.isArray(data)) {
             return { id, y: data };
           }
@@ -63,7 +49,7 @@ export async function getSeries(id: string) {
 }
 export async function getPrecomputedInfo(seriesId: string, algorithm: string) {
   // Local: use Flask backend via Vite proxy
-  // Production: fetch from CDN
+  // Production: return structure indicating CDN-based loading
   if (isLocal) {
     const r = await fetch(`/precomputed/${seriesId}/${algorithm}`);
     if (!r.ok) {
@@ -72,13 +58,30 @@ export async function getPrecomputedInfo(seriesId: string, algorithm: string) {
     return r.json();
   }
   
-  // Production: fetch from CDN
-  const cdnUrl = getPrecomputedUrl(seriesId, algorithm);
-  const r = await fetch(cdnUrl);
-  if (!r.ok) {
-    return { available: false };
+  // Production: We don't have a metadata file in CDN, but we know the structure:
+  // - 100 levels (0-99)
+  // - Files are named: {algorithm}_level_{0-99}.json
+  // Return a structure that tells the frontend to fetch levels on-demand
+  try {
+    // Try to fetch level 0 to verify the algorithm exists
+    const testUrl = `${CDN_BASE_URL}/precomputed/${seriesId}/${algorithm}_level_0.json`;
+    const testResponse = await fetch(testUrl, { method: 'HEAD' });
+    
+    if (testResponse.ok) {
+      return {
+        available: true,
+        useCDN: true,  // Flag indicating CDN-based loading
+        numLevels: 100,  // Standard structure: 100 levels
+        paramName: 'level',  // Generic param name
+        paramValues: Array.from({length: 100}, (_, i) => i),  // 0-99
+        paeValues: []  // Not available in CDN without metadata
+      };
+    }
+  } catch (e) {
+    console.warn(`[API] Could not verify precomputed data for ${seriesId}/${algorithm}`);
   }
-  return r.json();
+  
+  return { available: false };
 }
 export async function postSmooth(body: any) {
   // Local: use Flask backend via Vite proxy
