@@ -48,7 +48,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('stock_price');
   const [selectedDataset, setSelectedDataset] = useState<string>('stock_aapl_price');
   const [selectedMetric, setSelectedMetric] = useState('level_l1');
-  const [viewMode, setViewMode] = useState<'ranking' | 'zscore' | 'both' | 'raw' | 'distribution'>('both');
+  const [viewMode, setViewMode] = useState<'ranking' | 'zscore' | 'both'>('both');
   const [showLegend, setShowLegend] = useState(true);
   const [showAllRanks, setShowAllRanks] = useState(false);
 
@@ -243,7 +243,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             </label>
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both' | 'raw' | 'distribution')}
+              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both')}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -257,8 +257,6 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
               <option value="both">Ranking + Z-Score</option>
               <option value="ranking">Ranking Only</option>
               <option value="zscore">Z-Score Only</option>
-              <option value="raw">Raw Values</option>
-              <option value="distribution">Grade Distribution</option>
             </select>
           </div>
         )}
@@ -456,7 +454,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             flex: 1,
             padding: 16,
             display: 'grid',
-            gridTemplateColumns: viewMode === 'both' ? '1fr 1fr 400px' : (viewMode === 'raw' || viewMode === 'distribution') ? '1fr 400px' : '1fr 400px',
+            gridTemplateColumns: viewMode === 'both' ? '1fr 1fr 400px' : '1fr 400px',
             gap: 16,
             alignItems: 'start',
             alignContent: 'start'
@@ -538,92 +536,6 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
                     error.style.color = '#999';
                     error.innerHTML = `
                       <p style="margin: 0; font-size: 14px;">📈 Plot not found</p>
-                      <p style="margin: 8px 0 0 0; font-size: 12px;">Run generate_vegalite_plots.py to create plots</p>
-                    `;
-                    parent.appendChild(error);
-                  }
-                }}
-              />
-            </div>
-          )}
-
-          {/* Raw Values Plot */}
-          {viewMode === 'raw' && (
-            <div style={{
-              backgroundColor: '#fff',
-              borderRadius: 4,
-              padding: 16,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              height: '600px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#333' }}>
-                📊 Raw Values
-              </h3>
-              <img
-                src={getPath(`${selectedMetric}_raw.svg`)}
-                alt={`Raw values plot for ${selectedMetric}`}
-                style={{ 
-                  width: '100%', 
-                  height: '100%',
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  img.style.display = 'none';
-                  const parent = img.parentElement;
-                  if (parent) {
-                    const error = document.createElement('div');
-                    error.style.padding = '60px 20px';
-                    error.style.textAlign = 'center';
-                    error.style.color = '#999';
-                    error.innerHTML = `
-                      <p style="margin: 0; font-size: 14px;">📊 Plot not found</p>
-                      <p style="margin: 8px 0 0 0; font-size: 12px;">Run generate_vegalite_plots.py to create plots</p>
-                    `;
-                    parent.appendChild(error);
-                  }
-                }}
-              />
-            </div>
-          )}
-
-          {/* Grade Distribution Plot */}
-          {viewMode === 'distribution' && (
-            <div style={{
-              backgroundColor: '#fff',
-              borderRadius: 4,
-              padding: 16,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              height: '600px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#333' }}>
-                🎯 Grade Distribution (Excellent/Good/Fair/Poor)
-              </h3>
-              <img
-                src={getPath(`${selectedMetric}_fc_distribution.svg`)}
-                alt={`Grade distribution for ${selectedMetric}`}
-                style={{ 
-                  width: '100%', 
-                  height: '100%',
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  img.style.display = 'none';
-                  const parent = img.parentElement;
-                  if (parent) {
-                    const error = document.createElement('div');
-                    error.style.padding = '60px 20px';
-                    error.style.textAlign = 'center';
-                    error.style.color = '#999';
-                    error.innerHTML = `
-                      <p style="margin: 0; font-size: 14px;">🎯 Plot not found</p>
                       <p style="margin: 8px 0 0 0; font-size: 12px;">Run generate_vegalite_plots.py to create plots</p>
                     `;
                     parent.appendChild(error);
