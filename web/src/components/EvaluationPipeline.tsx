@@ -1,4 +1,5 @@
 import React from 'react';
+import { getPlotUrl } from '../config/cdn';
 
 export default function EvaluationPipeline() {
   return (
@@ -29,12 +30,12 @@ export default function EvaluationPipeline() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
           <ImageCard 
             title="Original Apple Stock Price (Level 0)"
-            src="/plots/original/stock_aapl_price.svg"
+            src={getPlotUrl('/plots/original/stock_aapl_price.svg')}
             alt="Original AAPL stock price"
           />
           <ImageCard 
             title="Gaussian Filter on the dataset at simplification degree 50"
-            src="/plots/pipeline/gaussian_50.svg"
+            src={getPlotUrl('/plots/pipeline/gaussian_50.svg')}
             alt="Gaussian smoothed AAPL with transparent original overlay"
           />
         </div>
@@ -54,7 +55,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
           <ImageCard 
             title="Level Feature Comparison: Original vs Smoothed"
-            src="/plots/pipeline/level_overlay.svg"
+            src={getPlotUrl('/plots/pipeline/level_overlay.svg')}
             alt="Level feature overlay showing point-wise differences"
             fullWidth
           />
@@ -82,7 +83,7 @@ export default function EvaluationPipeline() {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', marginBottom: '1rem' }}>
           <img 
-            src="/plots/pipeline/algo_legend_horizontal.svg" 
+            src={getPlotUrl('/plots/pipeline/algo_legend_horizontal.svg')}
             alt="Algorithm color legend"
             style={{ maxWidth: '100%', height: 'auto' }}
           />
@@ -91,7 +92,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '1.5rem' }}>
           <ImageCard 
             title="Level L1: Raw Scatter (PAE vs Feature Similarity)"
-            src="/plots/stock_aapl_price/ranking/level_l1_raw.svg"
+            src={getPlotUrl('/plots/stock_aapl_price/ranking/level_l1_raw.svg')}
             alt="Raw scatter plot showing PAE vs level_l1 similarity"
             fullWidth
           />
@@ -142,7 +143,7 @@ export default function EvaluationPipeline() {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', marginBottom: '1rem' }}>
           <img 
-            src="/plots/pipeline/algo_legend_horizontal.svg" 
+            src={getPlotUrl('/plots/pipeline/algo_legend_horizontal.svg')}
             alt="Algorithm color legend"
             style={{ maxWidth: '100%', height: 'auto' }}
           />
@@ -151,7 +152,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '1.5rem' }}>
           <ImageCard 
             title="Level L1: Z-Normalized Scatter"
-            src="/plots/stock_aapl_price/ranking/level_l1_zscore_fc.svg"
+            src={getPlotUrl('/plots/stock_aapl_price/ranking/level_l1_zscore_fc.svg')}
             alt="Z-normalized scatter plot"
             fullWidth
           />
@@ -207,7 +208,7 @@ export default function EvaluationPipeline() {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', marginBottom: '1rem' }}>
           <img 
-            src="/plots/pipeline/algo_legend_horizontal.svg" 
+            src={getPlotUrl('/plots/pipeline/algo_legend_horizontal.svg')}
             alt="Algorithm color legend"
             style={{ maxWidth: '100%', height: 'auto' }}
           />
@@ -216,7 +217,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '1.5rem' }}>
           <ImageCard 
             title="Level L1: Rating Distribution per Algorithm"
-            src="/plots/stock_aapl_price/ranking/level_l1_fc_distribution.svg"
+            src={getPlotUrl('/plots/stock_aapl_price/ranking/level_l1_fc_distribution.svg')}
             alt="Distribution of ratings across algorithms"
             fullWidth
           />
@@ -420,7 +421,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
           <ImageCard 
             title="Algorithm × Metric Mean Grades Heatmap"
-            src="/plots/fc_visualizations/algorithm_metric_average_grades_colored.svg"
+            src={getPlotUrl('/plots/fc_visualizations/algorithm_metric_average_grades_colored.svg')}
             alt="Heatmap showing mean grades for all algorithm-metric combinations"
             fullWidth
           />
@@ -637,7 +638,7 @@ export default function EvaluationPipeline() {
         <div style={{ marginTop: '2rem', marginBottom: '1.5rem' }}>
           <ImageCard 
             title="Algorithm × Metric Variance Table"
-            src="/plots/pipeline/variance_table.svg"
+            src={getPlotUrl('/plots/pipeline/variance_table.svg')}
             alt="Variance table showing consistency of each algorithm-metric combination"
             fullWidth
           />
