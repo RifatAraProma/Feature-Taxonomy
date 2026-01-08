@@ -45,7 +45,13 @@ export async function fetchFeatureScales(datasetId: string): Promise<FeatureScal
       return null;
     }
   } catch (error) {
-    console.error(`[API] Error fetching feature scales:`, error);
+    // Silently fail on CORS errors - CDN may not have CORS configured
+    // Only log if it's not a fetch/network error
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.log(`[API] Feature scales not available (CORS/network issue) - using defaults`);
+    } else {
+      console.error(`[API] Error fetching feature scales:`, error);
+    }
     return null;
   }
 }

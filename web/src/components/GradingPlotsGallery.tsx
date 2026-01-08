@@ -74,6 +74,23 @@ export default function GradingPlotsGallery() {
       overflow: 'auto',
       backgroundColor: '#f5f5f5'
     }}>
+      {/* Description Header */}
+      <div style={{
+        padding: '20px 24px',
+        backgroundColor: '#e8f5e9',
+        borderBottom: '2px solid #4CAF50',
+        marginBottom: 0
+      }}>
+        <h2 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600, color: '#2E7D32' }}>
+          📊 Grading Analysis
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, color: '#555', lineHeight: 1.6 }}>
+          <strong>Grading measures consistency:</strong> After computing FC scores and assigning quartile-based ratings across all 100 levels, 
+          we calculate letter grades (A-F) for each algorithm-metric and algorithm-dataset combination following the process described in
+          <span style={{ color: '#1976D2', fontWeight: 600 }}> "Evaluation Pipeline" tab.</span>
+        </p>
+      </div>
+
       <div style={{
         maxWidth: 1400,
         margin: '0 auto',
@@ -89,7 +106,7 @@ export default function GradingPlotsGallery() {
             color: '#1a1a1a',
             marginBottom: 8
           }}>
-            📊 Algorithm Grading Visualizations
+            Algorithm Grading Visualizations
           </h1>
           <p style={{
             fontSize: 16,

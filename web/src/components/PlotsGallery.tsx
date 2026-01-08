@@ -99,6 +99,26 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   const getPath = (filename: string) => getPlotUrl(`${selectedDataset}/ranking/${filename}`);
 
   return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Description Header */}
+      <div style={{
+        padding: '20px 24px',
+        backgroundColor: '#e3f2fd',
+        borderBottom: '2px solid #1976D2',
+        flexShrink: 0
+      }}>
+    
+        <h2 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600, color: '#1976D2' }}>
+          📈 FC Score Based Algorithm Performance
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, color: '#555', lineHeight: 1.6 }}>
+          <strong>Feature Comparison (FC) scores</strong> measure how well each simplification level preserves specific visual features. 
+          For each dataset-algorithm-metric combination, we compute FC scores across all 100 smoothing levels, z-normalize them, and assign quartile-based grades (E/G/F/P). 
+          The visualizations below show raw scatter plots, z-normalized distributions, and per-algorithm grade histograms.
+        </p>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
     <div style={{ height: '100%', display: 'flex' }}>
       {/* Left Sidebar - All Controls */}
       <div style={{
@@ -119,7 +139,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             📊 Algorithm Performance
           </h2>
           <p style={{ margin: 0, fontSize: 11, color: '#666', lineHeight: 1.4 }}>
-            Z-score placement and grade-based algorithm rankings
+            Z-score placement and mean FC score-based algorithm rankings
           </p>
         </div>
 
@@ -588,7 +608,9 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
           </div>
         </div>
         )}
+        </div>
       </div>
+    </div>
     </div>
   );
 }

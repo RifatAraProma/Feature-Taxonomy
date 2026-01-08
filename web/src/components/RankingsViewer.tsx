@@ -106,6 +106,23 @@ export default function RankingsViewer() {
       overflow: 'hidden',
       backgroundColor: '#f5f5f5'
     }}>
+      {/* Description Header */}
+      <div style={{
+        padding: '20px 24px',
+        backgroundColor: '#fff3e0',
+        borderBottom: '2px solid #FF9800',
+        flexShrink: 0
+      }}>
+        <h2 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600, color: '#E65100' }}>
+          🏆 Average FC Score Based Ranking
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, color: '#555', lineHeight: 1.6 }}>
+          These rankings show <strong>algorithm performance based on average FC (Feature Comparison) scores</strong> across all 100 smoothing levels. 
+          For each dataset or feature category, we compute mean FC scores (higher = better feature preservation) and rank algorithms accordingly. 
+          Rankings can be viewed by dataset type, individual feature, feature category, data density, periodicity, or globally across all datasets.
+        </p>
+      </div>
+
       {/* Controls Panel */}
       <div style={{
         backgroundColor: '#fff',

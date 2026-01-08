@@ -8,11 +8,12 @@ import OriginalPlotsGallery from './components/OriginalPlotsGallery'
 import RankingsViewer from './components/RankingsViewer'
 import GradingPlotsGallery from './components/GradingPlotsGallery'
 import PaperFiguresGallery from './components/PaperFiguresGallery'
+import EvaluationPipeline from './components/EvaluationPipeline'
 import { getSeries, postSmooth, getPrecomputedInfo } from './api'
 import { getAlgorithmColor } from './constants/algorithmColors'
 
 export default function App(){
-  const [activeTab, setActiveTab] = useState<'explorer' | 'plots' | 'original' | 'rankings' | 'grading' | 'paper'>('explorer')
+  const [activeTab, setActiveTab] = useState<'explorer' | 'original' | 'pipeline' | 'plots' | 'rankings' | 'grading' | 'paper'>('explorer')
   const [dataset, setDataset] = useState('stock_aapl_price')
   const [method, setMethod] = useState('gaussian_filter')
   const [param, setParam] = useState(0)  // Start at level 0 (highest PAE, least smoothing)
@@ -382,22 +383,6 @@ export default function App(){
               🔍 Data Explorer
             </button>
             <button
-              onClick={() => setActiveTab('plots')}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                borderBottom: activeTab === 'plots' ? '3px solid #1E88E5' : '3px solid transparent',
-                backgroundColor: activeTab === 'plots' ? '#E3F2FD' : 'transparent',
-                color: activeTab === 'plots' ? '#1E88E5' : '#666',
-                fontSize: 14,
-                fontWeight: activeTab === 'plots' ? 600 : 400,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              📊 Algorithm Performance
-            </button>
-            <button
               onClick={() => setActiveTab('original')}
               style={{
                 padding: '10px 20px',
@@ -411,7 +396,39 @@ export default function App(){
                 transition: 'all 0.2s'
               }}
             >
-              📈 Original Data
+              📁 Dataset Visualizations
+            </button>
+            <button
+              onClick={() => setActiveTab('pipeline')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'pipeline' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'pipeline' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'pipeline' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'pipeline' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              ⚙️ Evaluation Pipeline
+            </button>
+            <button
+              onClick={() => setActiveTab('plots')}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                borderBottom: activeTab === 'plots' ? '3px solid #1E88E5' : '3px solid transparent',
+                backgroundColor: activeTab === 'plots' ? '#E3F2FD' : 'transparent',
+                color: activeTab === 'plots' ? '#1E88E5' : '#666',
+                fontSize: 14,
+                fontWeight: activeTab === 'plots' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📈 FC Score Based Algorithm Performance
             </button>
             <button
               onClick={() => setActiveTab('rankings')}
@@ -427,7 +444,7 @@ export default function App(){
                 transition: 'all 0.2s'
               }}
             >
-              🏆 Rankings
+              🏆 Average FC Score Based Ranking
             </button>
             <button
               onClick={() => setActiveTab('grading')}
@@ -474,16 +491,24 @@ export default function App(){
             <ChartPanel orig={orig} smooth={smooth} overlays={overlays} aspect={aspect} method={method} selectedFeature={selectedFeature} />
             <MetricsBar metrics={metrics} datasetId={dataset} />
           </div>
-        ) : activeTab === 'plots' ? (
-          <PlotsGallery />
         ) : activeTab === 'original' ? (
           <OriginalPlotsGallery />
+        ) : activeTab === 'pipeline' ? (
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
+            backgroundColor: '#fafafa'
+          }}>
+            <EvaluationPipeline />
+          </div>
+        ) : activeTab === 'plots' ? (
+          <PlotsGallery />
+        ) : activeTab === 'rankings' ? (
+          <RankingsViewer />
         ) : activeTab === 'grading' ? (
           <GradingPlotsGallery />
-        ) : activeTab === 'paper' ? (
-          <PaperFiguresGallery />
         ) : (
-          <RankingsViewer />
+          <PaperFiguresGallery />
         )}
       </div>
 
