@@ -1,5 +1,4 @@
 import { getPrecomputedUrl, CDN_BASE_URL } from './config/cdn';
-import { computeBasicMetrics } from './utils/clientMetrics';
 
 // Detect if running locally (development) or in production
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -75,9 +74,9 @@ export async function getPrecomputedInfo(seriesId: string, algorithm: string) {
       return {
         available: true,
         useCDN: true,  // Flag indicating CDN-based loading
-        numLevels: 100,  // Standard structure: 100 levels
+        numLevels: 101,  // Standard structure: 101 levels (0-100)
         paramName: 'level',  // Generic param name
-        paramValues: Array.from({length: 100}, (_, i) => i),  // 0-99
+        paramValues: Array.from({length: 101}, (_, i) => i),  // 0-100
         paeValues: []  // Not available in CDN without metadata
       };
     }
@@ -133,15 +132,6 @@ export async function postSmooth(body: any, origData?: {t: number, y: number}[])
   // Feature preservation metrics are already computed and stored in CDN files
   if (data.feature_preservation) {
     metrics.featurePreservation = data.feature_preservation;
-  }
-  
-  // Compute additional basic metrics if original data provided
-  if (origData && origData.length > 0) {
-    const basicMetrics = computeBasicMetrics(origData, yhat);
-    metrics.mae = basicMetrics.mae;
-    metrics.rmse = basicMetrics.rmse;
-    metrics.correlation = basicMetrics.correlation;
-    metrics.lengthRatio = basicMetrics.lengthRatio;
   }
   
   return {
