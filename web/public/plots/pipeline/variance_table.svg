@@ -1,0 +1,952 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1525" height="782" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .header-text { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; }
+      .algo-text { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; }
+      .cell-text { font-family: Arial, sans-serif; font-size: 10px; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <!-- Title -->
+  <text x="762.5" y="20" text-anchor="middle" class="title">Algorithm × Metric Variance Table</text>
+  <text x="762.5" y="38" text-anchor="middle" style="font-family: Arial; font-size: 10px; fill: #666;">(Darker = Higher Variance, White = Low Variance &lt; 0.5)</text>
+  
+  <!-- Header row -->
+  <rect x="10" y="50" width="115" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <text x="67.5" y="115" text-anchor="middle" class="header-text">Algorithm</text>
+  <rect x="125" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(157.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Level ℓ₁</text>
+  </g>
+  <rect x="190" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(222.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Level ℓ∞</text>
+  </g>
+  <rect x="255" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(287.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Mean Δ</text>
+  </g>
+  <rect x="320" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(352.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Regimes Δ</text>
+  </g>
+  <rect x="385" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(417.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Extrema W₁</text>
+  </g>
+  <rect x="450" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(482.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Extrema W∞</text>
+  </g>
+  <rect x="515" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(547.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Spikes/Dips W₁</text>
+  </g>
+  <rect x="580" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(612.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Spikes/Dips W∞</text>
+  </g>
+  <rect x="645" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(677.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Slope ℓ₁</text>
+  </g>
+  <rect x="710" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(742.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Slope ℓ∞</text>
+  </g>
+  <rect x="775" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(807.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Curvature ℓ₁</text>
+  </g>
+  <rect x="840" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(872.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Curvature ℓ∞</text>
+  </g>
+  <rect x="905" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(937.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Trend ℓ₁</text>
+  </g>
+  <rect x="970" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1002.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Trend ℓ∞</text>
+  </g>
+  <rect x="1035" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1067.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Regression ℓ₁</text>
+  </g>
+  <rect x="1100" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1132.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Regression ℓ∞</text>
+  </g>
+  <rect x="1165" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1197.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Periodicity Amplitude Δ</text>
+  </g>
+  <rect x="1230" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1262.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Periodicity Periods Δ</text>
+  </g>
+  <rect x="1295" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1327.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Roughness Δ</text>
+  </g>
+  <rect x="1360" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1392.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Noise ℓ₁</text>
+  </g>
+  <rect x="1425" y="50" width="65" height="140" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <g transform="translate(1457.5, 180) rotate(-90)">
+    <text text-anchor="start" class="header-text">Noise ℓ∞</text>
+  </g>
+  <rect x="10" y="190" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="208.0" class="algo-text">ASAP</text>
+  <rect x="125" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="190" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="255" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="320" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">0.80</text>
+  <rect x="385" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.32</text>
+  <rect x="450" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.24</text>
+  <rect x="515" y="190" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.50</text>
+  <rect x="580" y="190" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.54</text>
+  <rect x="645" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.21</text>
+  <rect x="710" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.35</text>
+  <rect x="775" y="190" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.52</text>
+  <rect x="840" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.44</text>
+  <rect x="905" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.10</text>
+  <rect x="970" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.10</text>
+  <rect x="1035" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.10</text>
+  <rect x="1100" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.11</text>
+  <rect x="1165" y="190" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.83</text>
+  <rect x="1230" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.36</text>
+  <rect x="1295" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.21</text>
+  <rect x="1360" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.23</text>
+  <rect x="1425" y="190" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="208.0" text-anchor="middle" class="cell-text" fill="#000000">1.41</text>
+  <rect x="10" y="218" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="236.0" class="algo-text">PAA</text>
+  <rect x="125" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.94</text>
+  <rect x="190" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.73</text>
+  <rect x="255" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.74</text>
+  <rect x="320" y="218" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.46</text>
+  <rect x="385" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.93</text>
+  <rect x="450" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.86</text>
+  <rect x="515" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.88</text>
+  <rect x="580" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">1.02</text>
+  <rect x="645" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.70</text>
+  <rect x="710" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.66</text>
+  <rect x="775" y="218" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="840" y="218" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="905" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.75</text>
+  <rect x="970" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.70</text>
+  <rect x="1035" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.72</text>
+  <rect x="1100" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.75</text>
+  <rect x="1165" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="1230" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.51</text>
+  <rect x="1295" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="1360" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.75</text>
+  <rect x="1425" y="218" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="236.0" text-anchor="middle" class="cell-text" fill="#000000">0.69</text>
+  <rect x="10" y="246" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="264.0" class="algo-text">Butterworth</text>
+  <rect x="125" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.40</text>
+  <rect x="190" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.84</text>
+  <rect x="255" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.40</text>
+  <rect x="320" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">1.38</text>
+  <rect x="385" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.74</text>
+  <rect x="450" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="515" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.74</text>
+  <rect x="580" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.96</text>
+  <rect x="645" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.22</text>
+  <rect x="710" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="775" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.23</text>
+  <rect x="840" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.15</text>
+  <rect x="905" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="970" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.46</text>
+  <rect x="1035" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="1100" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.33</text>
+  <rect x="1165" y="246" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.53</text>
+  <rect x="1230" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.25</text>
+  <rect x="1295" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="1360" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="1425" y="246" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="264.0" text-anchor="middle" class="cell-text" fill="#000000">0.42</text>
+  <rect x="10" y="274" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="292.0" class="algo-text">Chebyshev</text>
+  <rect x="125" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.25</text>
+  <rect x="190" y="274" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.72</text>
+  <rect x="255" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="320" y="274" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">1.07</text>
+  <rect x="385" y="274" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="450" y="274" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.58</text>
+  <rect x="515" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.22</text>
+  <rect x="580" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.36</text>
+  <rect x="645" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="710" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="775" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="840" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="905" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="970" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="1035" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="1100" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.29</text>
+  <rect x="1165" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="1230" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.20</text>
+  <rect x="1295" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="1360" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.21</text>
+  <rect x="1425" y="274" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="292.0" text-anchor="middle" class="cell-text" fill="#000000">0.48</text>
+  <rect x="10" y="302" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="320.0" class="algo-text">Elliptical</text>
+  <rect x="125" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.28</text>
+  <rect x="190" y="302" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.72</text>
+  <rect x="255" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.28</text>
+  <rect x="320" y="302" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">1.06</text>
+  <rect x="385" y="302" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.51</text>
+  <rect x="450" y="302" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.58</text>
+  <rect x="515" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.22</text>
+  <rect x="580" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="645" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.21</text>
+  <rect x="710" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.27</text>
+  <rect x="775" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="840" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="905" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="970" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.38</text>
+  <rect x="1035" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.27</text>
+  <rect x="1100" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.24</text>
+  <rect x="1165" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="1230" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.20</text>
+  <rect x="1295" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="1360" y="302" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.21</text>
+  <rect x="1425" y="302" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="320.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="10" y="330" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="348.0" class="algo-text">FFT Cutoff</text>
+  <rect x="125" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.80</text>
+  <rect x="190" y="330" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">1.92</text>
+  <rect x="255" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="320" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">1.28</text>
+  <rect x="385" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="450" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.84</text>
+  <rect x="515" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.74</text>
+  <rect x="580" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.91</text>
+  <rect x="645" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="710" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">1.07</text>
+  <rect x="775" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.47</text>
+  <rect x="840" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.48</text>
+  <rect x="905" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.46</text>
+  <rect x="970" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="1035" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="1100" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.47</text>
+  <rect x="1165" y="330" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="1230" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.44</text>
+  <rect x="1295" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="1360" y="330" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">0.43</text>
+  <rect x="1425" y="330" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="348.0" text-anchor="middle" class="cell-text" fill="#000000">1.67</text>
+  <rect x="10" y="358" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="376.0" class="algo-text">FPCS</text>
+  <rect x="125" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.07</text>
+  <rect x="190" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.40</text>
+  <rect x="255" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="320" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.06</text>
+  <rect x="385" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.09</text>
+  <rect x="450" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.02</text>
+  <rect x="515" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.91</text>
+  <rect x="580" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.92</text>
+  <rect x="645" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.61</text>
+  <rect x="710" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.84</text>
+  <rect x="775" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.35</text>
+  <rect x="840" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.52</text>
+  <rect x="905" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="970" y="358" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">0.16</text>
+  <rect x="1035" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="1100" y="358" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.55</text>
+  <rect x="1165" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.00</text>
+  <rect x="1230" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="1295" y="358" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">0.12</text>
+  <rect x="1360" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.44</text>
+  <rect x="1425" y="358" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="376.0" text-anchor="middle" class="cell-text" fill="#000000">1.45</text>
+  <rect x="10" y="386" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="404.0" class="algo-text">Gaussian Filter</text>
+  <rect x="125" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="190" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="255" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="320" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.37</text>
+  <rect x="385" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.37</text>
+  <rect x="450" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.25</text>
+  <rect x="515" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.46</text>
+  <rect x="580" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="645" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="710" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="775" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="840" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="905" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="970" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1035" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1100" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1165" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.33</text>
+  <rect x="1230" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="1295" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1360" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1425" y="386" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="404.0" text-anchor="middle" class="cell-text" fill="#000000">1.14</text>
+  <rect x="10" y="414" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="432.0" class="algo-text">LTTB</text>
+  <rect x="125" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.29</text>
+  <rect x="190" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="255" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.27</text>
+  <rect x="320" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="385" y="414" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.67</text>
+  <rect x="450" y="414" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.72</text>
+  <rect x="515" y="414" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.75</text>
+  <rect x="580" y="414" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">1.03</text>
+  <rect x="645" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="710" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="775" y="414" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.51</text>
+  <rect x="840" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="905" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="970" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.29</text>
+  <rect x="1035" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.33</text>
+  <rect x="1100" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="1165" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="1230" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.43</text>
+  <rect x="1295" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.24</text>
+  <rect x="1360" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.28</text>
+  <rect x="1425" y="414" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="432.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="10" y="442" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="460.0" class="algo-text">M4</text>
+  <rect x="125" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.38</text>
+  <rect x="190" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.43</text>
+  <rect x="255" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.53</text>
+  <rect x="320" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.50</text>
+  <rect x="385" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">1.36</text>
+  <rect x="450" y="442" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">1.59</text>
+  <rect x="515" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.53</text>
+  <rect x="580" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">1.21</text>
+  <rect x="645" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.08</text>
+  <rect x="710" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.24</text>
+  <rect x="775" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="840" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.38</text>
+  <rect x="905" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.54</text>
+  <rect x="970" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.49</text>
+  <rect x="1035" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.53</text>
+  <rect x="1100" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="1165" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.44</text>
+  <rect x="1230" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.44</text>
+  <rect x="1295" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="1360" y="442" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.58</text>
+  <rect x="1425" y="442" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="460.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="10" y="470" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="488.0" class="algo-text">Max Filter</text>
+  <rect x="125" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.69</text>
+  <rect x="190" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.90</text>
+  <rect x="255" y="470" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="320" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.17</text>
+  <rect x="385" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">2.78</text>
+  <rect x="450" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">2.77</text>
+  <rect x="515" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.90</text>
+  <rect x="580" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.38</text>
+  <rect x="645" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.47</text>
+  <rect x="710" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.63</text>
+  <rect x="775" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.34</text>
+  <rect x="840" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="905" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="970" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.68</text>
+  <rect x="1035" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="1100" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.71</text>
+  <rect x="1165" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.98</text>
+  <rect x="1230" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.26</text>
+  <rect x="1295" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.24</text>
+  <rect x="1360" y="470" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">0.55</text>
+  <rect x="1425" y="470" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="488.0" text-anchor="middle" class="cell-text" fill="#000000">1.76</text>
+  <rect x="10" y="498" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="516.0" class="algo-text">Mean Filter</text>
+  <rect x="125" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="190" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.14</text>
+  <rect x="255" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="320" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.34</text>
+  <rect x="385" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.49</text>
+  <rect x="450" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="515" y="498" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.51</text>
+  <rect x="580" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.26</text>
+  <rect x="645" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="710" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.20</text>
+  <rect x="775" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.19</text>
+  <rect x="840" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="905" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="970" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1035" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1100" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1165" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.44</text>
+  <rect x="1230" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.32</text>
+  <rect x="1295" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.14</text>
+  <rect x="1360" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1425" y="498" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="516.0" text-anchor="middle" class="cell-text" fill="#000000">1.15</text>
+  <rect x="10" y="526" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="544.0" class="algo-text">Median Filter</text>
+  <rect x="125" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.22</text>
+  <rect x="190" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.23</text>
+  <rect x="255" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.22</text>
+  <rect x="320" y="526" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.52</text>
+  <rect x="385" y="526" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">2.46</text>
+  <rect x="450" y="526" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">2.40</text>
+  <rect x="515" y="526" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">2.76</text>
+  <rect x="580" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.44</text>
+  <rect x="645" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="710" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="775" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.39</text>
+  <rect x="840" y="526" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.50</text>
+  <rect x="905" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.22</text>
+  <rect x="970" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="1035" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.22</text>
+  <rect x="1100" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.17</text>
+  <rect x="1165" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.35</text>
+  <rect x="1230" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.43</text>
+  <rect x="1295" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.24</text>
+  <rect x="1360" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.22</text>
+  <rect x="1425" y="526" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="544.0" text-anchor="middle" class="cell-text" fill="#000000">1.31</text>
+  <rect x="10" y="554" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="572.0" class="algo-text">Min Filter</text>
+  <rect x="125" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.44</text>
+  <rect x="190" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">0.64</text>
+  <rect x="255" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.40</text>
+  <rect x="320" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.40</text>
+  <rect x="385" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">3.04</text>
+  <rect x="450" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">3.39</text>
+  <rect x="515" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">2.69</text>
+  <rect x="580" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.85</text>
+  <rect x="645" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.61</text>
+  <rect x="710" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.58</text>
+  <rect x="775" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.27</text>
+  <rect x="840" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.33</text>
+  <rect x="905" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.48</text>
+  <rect x="970" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.39</text>
+  <rect x="1035" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.42</text>
+  <rect x="1100" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.38</text>
+  <rect x="1165" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">2.19</text>
+  <rect x="1230" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="1295" y="554" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.35</text>
+  <rect x="1360" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">1.58</text>
+  <rect x="1425" y="554" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="572.0" text-anchor="middle" class="cell-text" fill="#000000">2.44</text>
+  <rect x="10" y="582" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="600.0" class="algo-text">MinMaxLTTB</text>
+  <rect x="125" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="190" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="255" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="320" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="385" y="582" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.65</text>
+  <rect x="450" y="582" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.75</text>
+  <rect x="515" y="582" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.82</text>
+  <rect x="580" y="582" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">1.01</text>
+  <rect x="645" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.26</text>
+  <rect x="710" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.33</text>
+  <rect x="775" y="582" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.51</text>
+  <rect x="840" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.40</text>
+  <rect x="905" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="970" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.36</text>
+  <rect x="1035" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.36</text>
+  <rect x="1100" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.30</text>
+  <rect x="1165" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.35</text>
+  <rect x="1230" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.48</text>
+  <rect x="1295" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.23</text>
+  <rect x="1360" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.33</text>
+  <rect x="1425" y="582" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="600.0" text-anchor="middle" class="cell-text" fill="#000000">0.34</text>
+  <rect x="10" y="610" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="628.0" class="algo-text">Savitzky-Golay</text>
+  <rect x="125" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="190" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.15</text>
+  <rect x="255" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="320" y="610" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.91</text>
+  <rect x="385" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.38</text>
+  <rect x="450" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.37</text>
+  <rect x="515" y="610" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.56</text>
+  <rect x="580" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.32</text>
+  <rect x="645" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.01</text>
+  <rect x="710" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.04</text>
+  <rect x="775" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.23</text>
+  <rect x="840" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.17</text>
+  <rect x="905" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="970" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.12</text>
+  <rect x="1035" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="1100" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="1165" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.18</text>
+  <rect x="1230" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.33</text>
+  <rect x="1295" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.16</text>
+  <rect x="1360" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.13</text>
+  <rect x="1425" y="610" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="628.0" text-anchor="middle" class="cell-text" fill="#000000">1.29</text>
+  <rect x="10" y="638" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="656.0" class="algo-text">Uniform Subsample</text>
+  <rect x="125" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.71</text>
+  <rect x="190" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.82</text>
+  <rect x="255" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.33</text>
+  <rect x="320" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.47</text>
+  <rect x="385" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.90</text>
+  <rect x="450" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.96</text>
+  <rect x="515" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.84</text>
+  <rect x="580" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.94</text>
+  <rect x="645" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="710" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="775" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.37</text>
+  <rect x="840" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.23</text>
+  <rect x="905" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.45</text>
+  <rect x="970" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.59</text>
+  <rect x="1035" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.44</text>
+  <rect x="1100" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.50</text>
+  <rect x="1165" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.48</text>
+  <rect x="1230" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.27</text>
+  <rect x="1295" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.39</text>
+  <rect x="1360" y="638" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.41</text>
+  <rect x="1425" y="638" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="656.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="10" y="666" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="684.0" class="algo-text">nan</text>
+  <rect x="125" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.01</text>
+  <rect x="190" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.04</text>
+  <rect x="255" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.25</text>
+  <rect x="320" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.17</text>
+  <rect x="385" y="666" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="450" y="666" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.62</text>
+  <rect x="515" y="666" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.52</text>
+  <rect x="580" y="666" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.84</text>
+  <rect x="645" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.01</text>
+  <rect x="710" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.02</text>
+  <rect x="775" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.05</text>
+  <rect x="840" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.13</text>
+  <rect x="905" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.22</text>
+  <rect x="970" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.16</text>
+  <rect x="1035" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.27</text>
+  <rect x="1100" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.28</text>
+  <rect x="1165" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.18</text>
+  <rect x="1230" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.12</text>
+  <rect x="1295" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.01</text>
+  <rect x="1360" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.15</text>
+  <rect x="1425" y="666" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="684.0" text-anchor="middle" class="cell-text" fill="#000000">0.17</text>
+  <rect x="10" y="694" width="115" height="28" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="15" y="712.0" class="algo-text">nan</text>
+  <rect x="125" y="694" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="157.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.48</text>
+  <rect x="190" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="222.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.66</text>
+  <rect x="255" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="287.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.81</text>
+  <rect x="320" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="352.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">1.06</text>
+  <rect x="385" y="694" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="417.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">1.51</text>
+  <rect x="450" y="694" width="65" height="28" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="482.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">1.56</text>
+  <rect x="515" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="547.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">1.23</text>
+  <rect x="580" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="612.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.95</text>
+  <rect x="645" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="677.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.68</text>
+  <rect x="710" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="742.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.64</text>
+  <rect x="775" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="807.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.71</text>
+  <rect x="840" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="872.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.63</text>
+  <rect x="905" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="937.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.59</text>
+  <rect x="970" y="694" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1002.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.32</text>
+  <rect x="1035" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1067.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.72</text>
+  <rect x="1100" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1132.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.63</text>
+  <rect x="1165" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1197.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.82</text>
+  <rect x="1230" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1262.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.88</text>
+  <rect x="1295" y="694" width="65" height="28" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="1327.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.36</text>
+  <rect x="1360" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1392.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.78</text>
+  <rect x="1425" y="694" width="65" height="28" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="1457.5" y="712.0" text-anchor="middle" class="cell-text" fill="#000000">0.63</text>
+
+  <!-- Legend -->
+  <text x="10" y="757" style="font-family: Arial; font-size: 11px; font-weight: bold;">Legend:</text>
+  
+  <rect x="80" y="745" width="30" height="15" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text x="115" y="757" style="font-family: Arial; font-size: 10px;">&lt; 0.5 (Low)</text>
+  
+  <rect x="210" y="745" width="30" height="15" fill="rgba(70,130,180,0.30)" stroke="#999" stroke-width="1"/>
+  <text x="245" y="757" style="font-family: Arial; font-size: 10px;">0.5 - 1.5 (Moderate)</text>
+  
+  <rect x="370" y="745" width="30" height="15" fill="rgba(70,130,180,0.70)" stroke="#999" stroke-width="1"/>
+  <text x="405" y="757" style="font-family: Arial; font-size: 10px; fill: #000;">&gt; 1.5 (High)</text>
+
+</svg>
