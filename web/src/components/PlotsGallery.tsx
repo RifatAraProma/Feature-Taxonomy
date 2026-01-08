@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getPlotUrl } from '../config/cdn';
+import { getPlotUrl, CDN_BASE_URL } from '../config/cdn';
 
 interface Dataset {
   id: string;
@@ -54,7 +54,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
 
   // Fetch datasets on mount
   useEffect(() => {
-    fetch('/datasets')
+    fetch(`${CDN_BASE_URL}/datasets.json`)
       .then(res => res.json())
       .then((data: Dataset[]) => {
         setDatasets(data);

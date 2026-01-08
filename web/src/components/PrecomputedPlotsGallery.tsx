@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { getAlgorithmColor } from '../constants/algorithmColors'
 import { getAlgorithmName } from '../constants/algorithmNames'
-import { CDN_URLS } from '../config/cdn'
+import { CDN_URLS, CDN_BASE_URL } from '../config/cdn'
 
 interface Dataset {
   id: string
@@ -40,7 +40,7 @@ export default function PrecomputedPlotsGallery() {
 
   useEffect(() => {
     // Load all datasets
-    fetch('/datasets')
+    fetch(`${CDN_BASE_URL}/datasets.json`)
       .then(res => res.json())
       .then(data => {
         const allCategories = new Set<string>()
