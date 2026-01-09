@@ -19,7 +19,7 @@ const METRICS = [
   'roughness_delta',
   'slope_l1', 'slope_linf',
   'trend_l1', 'trend_linf',
-  'noise_l1', 'noise_linf', 'noise_auc_delta',
+  'noise_l1', 'noise_linf',
   'periodicity_amplitude_delta', 'periodicity_num_periods_delta',
   'spikes_dips_bottleneck', 'spikes_dips_wasserstein',
   'regimes_delta',
@@ -36,7 +36,7 @@ const METRIC_CATEGORIES = {
   'Roughness': ['roughness_delta'],
   'Slope': ['slope_l1', 'slope_linf'],
   'Trend': ['trend_l1', 'trend_linf'],
-  'Noise': ['noise_l1', 'noise_linf', 'noise_auc_delta'],
+  'Noise': ['noise_l1', 'noise_linf'],
   'Periodicity': ['periodicity_amplitude_delta', 'periodicity_num_periods_delta'],
   'Spikes/Dips': ['spikes_dips_bottleneck', 'spikes_dips_wasserstein'],
   'Regimes': ['regimes_delta'],
@@ -49,7 +49,6 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   const [selectedDataset, setSelectedDataset] = useState<string>('stock_aapl_price');
   const [selectedMetric, setSelectedMetric] = useState('level_l1');
   const [viewMode, setViewMode] = useState<'ranking' | 'zscore' | 'both'>('both');
-  const [showLegend, setShowLegend] = useState(true);
   const [showAllRanks, setShowAllRanks] = useState(false);
 
   // Fetch datasets on mount
@@ -281,31 +280,6 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
           </div>
         )}
 
-        {/* Legend Toggle */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fff'
-        }}>
-          <button
-            onClick={() => setShowLegend(!showLegend)}
-            style={{
-              width: '100%',
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              fontSize: 13,
-              cursor: 'pointer',
-              backgroundColor: showLegend ? '#1E88E5' : '#fff',
-              color: showLegend ? '#fff' : '#333',
-              fontWeight: 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            {showLegend ? '✓ Legend Visible' : 'Show Legend'}
-          </button>
-        </div>
-
         {/* Metric Selector - Only show if not showing all ranks */}
         {!showAllRanks && (
           <div style={{
@@ -373,8 +347,27 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
         {showAllRanks ? (
           <div style={{
             flex: 1,
-            padding: 16
+            padding: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
           }}>
+            {/* Algorithm Legend - Top */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: '0 0 8px 0'
+            }}>
+              <img
+                src={getPlotUrl('/plots/pipeline/algo_legend_horizontal.svg')}
+                alt="Algorithm Color Legend"
+                style={{ 
+                  maxWidth: '100%',
+                  height: 'auto'
+                }}
+              />
+            </div>
+
             <div style={{
               marginBottom: 16,
               padding: 16,
@@ -473,12 +466,34 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
           <div style={{
             flex: 1,
             padding: 16,
-            display: 'grid',
-            gridTemplateColumns: viewMode === 'both' ? '1fr 1fr 400px' : '1fr 400px',
-            gap: 16,
-            alignItems: 'start',
-            alignContent: 'start'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
           }}>
+            {/* Algorithm Legend - Top */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: '0 0 8px 0'
+            }}>
+              <img
+                src={getPlotUrl('/plots/pipeline/algo_legend_horizontal.svg')}
+                alt="Algorithm Color Legend"
+                style={{ 
+                  maxWidth: '100%',
+                  height: 'auto'
+                }}
+              />
+            </div>
+
+            {/* Plots Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: viewMode === 'both' ? '1fr 1fr' : '1fr',
+              gap: 16,
+              flex: 1,
+              alignItems: 'start'
+            }}>
             {/* Ranking Plot */}
             {(viewMode === 'both' || viewMode === 'ranking') && (
             <div style={{
@@ -564,53 +579,12 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
               />
             </div>
           )}
-
-          {/* Legend - Always visible in single metric view */}
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: 4,
-            padding: 16,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            height: '600px',
-            display: 'flex',
-            flexDirection: 'column',
-            textAlign: 'center'
-          }}>
-            {/* <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#333' }}>
-              🎨 Algorithm Legend
-            </h3> */}
-            <img
-              src={getPath('algorithm_legend.svg')}
-              alt="Algorithm Color Legend"
-              style={{ 
-                maxWidth: '100%', 
-                height: '100%',
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.style.display = 'none';
-                const parent = img.parentElement;
-                if (parent && !parent.querySelector('.error-message')) {
-                  const error = document.createElement('div');
-                  error.className = 'error-message';
-                  error.style.padding = '40px 20px';
-                  error.style.textAlign = 'center';
-                  error.style.color = '#999';
-                  error.innerHTML = `
-                    <p style="margin: 0; font-size: 12px;">🎨 Legend not found</p>
-                    <p style="margin: 4px 0 0 0; font-size: 11px;">Run generate_vegalite_plots.py</p>
-                  `;
-                  parent.appendChild(error);
-                }
-              }}
-            />
+            </div>
           </div>
-        </div>
         )}
-        </div>
       </div>
     </div>
     </div>
+  </div>
   );
 }
