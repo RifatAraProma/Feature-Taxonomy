@@ -295,7 +295,7 @@ export default function EvaluationPipeline() {
               <ul style={{ marginTop: '0.5rem', color: '#666' }}>
                 <li>astro_115_120 → Grade A</li>
                 <li>chi_homicide_monthly → Grade A</li>
-                <li>climate_atl_prcp → Grade F</li>
+                <li>climate_atl_prcp → Grade A</li>
                 <li>climate_atl_tmax → Grade A</li>
                 <li>...and 76 more datasets</li>
               </ul>
@@ -309,10 +309,10 @@ export default function EvaluationPipeline() {
                 fontFamily: 'monospace',
                 fontSize: '0.95rem'
               }}>
-                [A, A, A, A, A, A, A, A, F, A, A, A, A, A, A, A, ...]
+                [A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, ...]
               </div>
               <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
-                Final distribution: 74 A's, 6 F's
+                Final distribution: 80 A's
               </div>
             </li>
             <li style={{ marginTop: '1rem' }}><strong>Find the most common grade (mode)</strong>
@@ -327,16 +327,16 @@ export default function EvaluationPipeline() {
                 fontFamily: 'monospace',
                 fontSize: '0.95rem'
               }}>
-                A: 74 datasets<br/>
+                A: 80 datasets<br/>
                 B: 0 datasets<br/>
                 C: 0 datasets<br/>
                 D: 0 datasets<br/>
-                F: 6 datasets
+                F: 0 datasets
               </div>
             </li>
             <li style={{ marginTop: '1rem' }}><strong>Select the grade with highest count</strong>
               <div style={{ marginTop: '0.5rem', color: '#666' }}>
-                Grade A appears 74 times (most frequent) → <strong>Mode = A</strong>
+                Grade A appears 80 times (most frequent) → <strong>Mode = A</strong>
               </div>
               <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem', fontStyle: 'italic' }}>
                 Note: If multiple grades have the same highest count (a tie), we highlight all common grades as the mode.
@@ -370,10 +370,10 @@ export default function EvaluationPipeline() {
           borderRadius: '8px',
           border: '2px solid #9C27B0'
         }}>
-          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>💡 Key Insight</h4>
+          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>Key Insight</h4>
           <p style={{ margin: 0, color: '#666' }}>
             Each cell represents 80 datasets worth of evaluation. For example, the "Gaussian Filter + Level L¹" cell
-            shows Grade A (appears 74 out of 80 times) — the most common outcome we just calculated. This matrix reveals algorithm strengths and weaknesses 
+            shows Grade A (appears 80 out of 80 times) — the most common outcome we just calculated. This matrix reveals algorithm strengths and weaknesses 
             across different visual features based on typical performance.
           </p>
         </div>
@@ -591,7 +591,7 @@ export default function EvaluationPipeline() {
         </div>
 
         <div style={styles.insight}>
-          <strong>🎯 Summary:</strong> This histogram grid is the complete evaluation snapshot — it shows both 
+          <strong>Summary:</strong> This histogram grid is the complete evaluation snapshot — it shows both 
           <em> what grade</em> algorithms typically receive (mode grade from tallest bar) and <em>how reliable</em> that 
           grade is across different datasets (deviation from orange line color). Together, these metrics help identify 
           algorithms that are both high-performing and consistently reliable across diverse time series types.
