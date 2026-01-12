@@ -53,7 +53,11 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
 
   // Fetch datasets on mount
   useEffect(() => {
-    fetch(`${CDN_BASE_URL}/datasets.json`)
+    // Use local path in development, CDN in production
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const datasetsUrl = isLocal ? '/datasets.json' : `${CDN_BASE_URL}/datasets.json`;
+    
+    fetch(datasetsUrl)
       .then(res => res.json())
       .then((data: Dataset[]) => {
         setDatasets(data);
@@ -98,7 +102,7 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
   const getPath = (filename: string) => getPlotUrl(`${selectedDataset}/ranking/${filename}`);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Description Header */}
       <div style={{
         padding: '20px 24px',
@@ -112,237 +116,20 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
         </h2>
         <p style={{ margin: 0, fontSize: 14, color: '#555', lineHeight: 1.6 }}>
           <strong>Feature Comparison (FC) scores</strong> measure how well each simplification level preserves specific visual features. 
-          For each dataset-algorithm-metric combination, we compute FC scores across all 100 smoothing levels, z-normalize them, and assign quartile-based grades (E/G/F/P). 
-          The visualizations below show raw scatter plots, z-normalized distributions, and per-algorithm grade histograms.
+          The visualizations below show z-normalized distributions and algorithm rank based on mean FC score.
         </p>
       </div>
 
+      {/* Main Content Area - Plot Display */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-    <div style={{ height: '100%', display: 'flex' }}>
-      {/* Left Sidebar - All Controls */}
-      <div style={{
-        width: 320,
-        borderRight: '1px solid #e0e0e0',
-        backgroundColor: '#fafafa',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto'
-      }}>
-        {/* Header */}
+        {/* Left Side - Plot Display Area */}
         <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fff'
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'auto',
+          backgroundColor: '#f5f5f5'
         }}>
-          <h2 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 600, color: '#333' }}>
-            📊 Algorithm Performance
-          </h2>
-          <p style={{ margin: 0, fontSize: 11, color: '#666', lineHeight: 1.4 }}>
-            Z-score placement and mean FC score-based algorithm rankings
-          </p>
-        </div>
-
-        {/* Dataset Category Selector */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fff'
-        }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Dataset Category:
-          </label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              fontSize: 13,
-              cursor: 'pointer',
-              backgroundColor: '#fff',
-              fontWeight: 500
-            }}
-          >
-            {categories.map(cat => (
-              <option key={cat} value={cat}>
-                {cat.toUpperCase()} ({groupedDatasets[cat].length})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Dataset File Selector */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fff'
-        }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Data File:
-          </label>
-          <select
-            value={selectedDataset}
-            onChange={(e) => setSelectedDataset(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              fontSize: 13,
-              cursor: 'pointer',
-              backgroundColor: '#fff'
-            }}
-          >
-            {filteredDatasets.map(d => (
-              <option key={d.id} value={d.id}>
-                {d.id} ({d.n.toLocaleString()} pts)
-              </option>
-            ))}
-          </select>
-          {filteredDatasets.find(d => d.id === selectedDataset) && (
-            <div style={{
-              marginTop: 8,
-              padding: 8,
-              backgroundColor: '#e3f2fd',
-              borderRadius: 4,
-              fontSize: 11,
-              color: '#555'
-            }}>
-              <strong style={{ color: '#1976d2' }}>{selectedDataset}</strong>
-              <div style={{ fontSize: 10, marginTop: 2 }}>
-                {filteredDatasets.find(d => d.id === selectedDataset)?.n.toLocaleString()} data points
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Show All Ranks Checkbox */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
-          backgroundColor: '#fff'
-        }}>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 500,
-            color: '#333'
-          }}>
-            <input
-              type="checkbox"
-              checked={showAllRanks}
-              onChange={(e) => setShowAllRanks(e.target.checked)}
-              style={{
-                marginRight: 8,
-                width: 16,
-                height: 16,
-                cursor: 'pointer'
-              }}
-            />
-            Show All Rank Plots
-          </label>
-          <p style={{ margin: '8px 0 0 24px', fontSize: 11, color: '#666', lineHeight: 1.4 }}>
-            Display ranking plots for all features and metrics
-          </p>
-        </div>
-
-        {/* View Mode Selector - Only show if not showing all ranks */}
-        {!showAllRanks && (
-          <div style={{
-            padding: '16px',
-            borderBottom: '1px solid #e0e0e0',
-            backgroundColor: '#fff'
-          }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              View Mode:
-            </label>
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both')}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                fontSize: 13,
-                cursor: 'pointer',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="both">Ranking + Z-Score</option>
-              <option value="ranking">Ranking Only</option>
-              <option value="zscore">Z-Score Only</option>
-            </select>
-          </div>
-        )}
-
-        {/* Metric Selector - Only show if not showing all ranks */}
-        {!showAllRanks && (
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#fff',
-            flex: 1,
-            overflow: 'auto'
-          }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 12, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Select Metric:
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {Object.entries(METRIC_CATEGORIES).map(([category, metrics]) => (
-                <div key={category}>
-                  <div style={{ 
-                    fontSize: 10, 
-                    fontWeight: 700, 
-                    color: '#999', 
-                    marginBottom: 6, 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.5px',
-                    paddingBottom: 4,
-                    borderBottom: '1px solid #f0f0f0'
-                  }}>
-                    {category}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {metrics.map(metric => (
-                      <button
-                        key={metric}
-                        onClick={() => setSelectedMetric(metric)}
-                        style={{
-                          padding: '6px 12px',
-                          border: selectedMetric === metric ? '2px solid #1E88E5' : '1px solid #e0e0e0',
-                          borderRadius: 4,
-                          fontSize: 12,
-                          cursor: 'pointer',
-                          backgroundColor: selectedMetric === metric ? '#E3F2FD' : '#fff',
-                          color: selectedMetric === metric ? '#1E88E5' : '#333',
-                          fontWeight: selectedMetric === metric ? 600 : 400,
-                          textAlign: 'left',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        {metric}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Right Side - Plot Display Area */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        backgroundColor: '#f5f5f5'
-      }}>
         {/* All Rank Plots View */}
         {showAllRanks ? (
           <div style={{
@@ -582,9 +369,232 @@ export default function PlotsGallery({}: PlotsGalleryProps) {
             </div>
           </div>
         )}
+        </div>
+
+        {/* Right Sidebar - Controls */}
+        <div style={{
+          width: 340,
+          borderLeft: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '-2px 0 8px rgba(0,0,0,0.1)',
+          flexShrink: 0
+        }}>
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: '1px solid #e0e0e0',
+            backgroundColor: '#fafafa'
+          }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#333' }}>
+              Controls
+            </h2>
+          </div>
+
+          <div style={{
+            flex: 1,
+            padding: 24,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20
+          }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: '#fff',
+          borderRadius: 8
+        }}>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 600, color: '#333' }}>
+            📊 Algorithm Performance
+          </h3>
+          <p style={{ margin: 0, fontSize: 11, color: '#666', lineHeight: 1.4 }}>
+            Z-score placement and mean FC score-based algorithm rankings
+          </p>
+        </div>
+
+        {/* Dataset Category Selector */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: '#fff',
+          borderRadius: 8
+        }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Dataset Category:
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: 4,
+              fontSize: 13,
+              cursor: 'pointer',
+              backgroundColor: '#fff',
+              fontWeight: 500
+            }}
+          >
+            {categories.map(cat => (
+              <option key={cat} value={cat}>
+                {cat.toUpperCase()} ({groupedDatasets[cat].length})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Dataset File Selector */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: '#fff',
+          borderRadius: 8
+        }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Data File:
+          </label>
+          <select
+            value={selectedDataset}
+            onChange={(e) => setSelectedDataset(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: 4,
+              fontSize: 13,
+              cursor: 'pointer',
+              backgroundColor: '#fff'
+            }}
+          >
+            {filteredDatasets.map(d => (
+              <option key={d.id} value={d.id}>
+                {d.id} ({d.n.toLocaleString()} pts)
+              </option>
+            ))}
+          </select>
+          {filteredDatasets.find(d => d.id === selectedDataset) && (
+            <div style={{
+              marginTop: 8,
+              padding: 8,
+              backgroundColor: '#e3f2fd',
+              borderRadius: 4,
+              fontSize: 11,
+              color: '#555'
+            }}>
+              <strong style={{ color: '#1976d2' }}>{selectedDataset}</strong>
+              <div style={{ fontSize: 10, marginTop: 2 }}>
+                {filteredDatasets.find(d => d.id === selectedDataset)?.n.toLocaleString()} data points
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Show All Ranks Checkbox */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: '#fff',
+          borderRadius: 8
+        }}>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 500,
+            color: '#333'
+          }}>
+            <input
+              type="checkbox"
+              checked={showAllRanks}
+              onChange={(e) => setShowAllRanks(e.target.checked)}
+              style={{
+                marginRight: 8,
+                width: 16,
+                height: 16,
+                cursor: 'pointer'
+              }}
+            />
+            Show All Rank Plots
+          </label>
+          <p style={{ margin: '8px 0 0 24px', fontSize: 11, color: '#666', lineHeight: 1.4 }}>
+            Display ranking plots for all features and metrics
+          </p>
+        </div>
+
+        {/* View Mode Selector - Only show if not showing all ranks */}
+        {!showAllRanks && (
+          <div style={{
+            padding: '16px',
+            borderBottom: '1px solid #e0e0e0',
+            backgroundColor: '#fff',
+            borderRadius: 8
+          }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              View Mode:
+            </label>
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as 'ranking' | 'zscore' | 'both')}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: 4,
+                fontSize: 13,
+                cursor: 'pointer',
+                backgroundColor: '#fff'
+              }}
+            >
+              <option value="both">Ranking + Z-Score</option>
+              <option value="ranking">Ranking Only</option>
+              <option value="zscore">Z-Score Only</option>
+            </select>
+          </div>
+        )}
+
+        {/* Metric Selector - Only show if not showing all ranks */}
+        {!showAllRanks && (
+          <div style={{
+            padding: '16px',
+            borderBottom: '1px solid #e0e0e0',
+            backgroundColor: '#fff',
+            borderRadius: 8
+          }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Select Metric:
+            </label>
+            <select
+              value={selectedMetric}
+              onChange={(e) => setSelectedMetric(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: 4,
+                fontSize: 13,
+                cursor: 'pointer',
+                backgroundColor: '#fff',
+                fontFamily: 'monospace'
+              }}
+            >
+              {Object.entries(METRIC_CATEGORIES).map(([category, metrics]) => (
+                <optgroup key={category} label={category}>
+                  {metrics.map(metric => (
+                    <option key={metric} value={metric}>
+                      {metric}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        )}
+          </div>
+        </div>
       </div>
     </div>
-    </div>
-  </div>
   );
 }

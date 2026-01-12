@@ -22,7 +22,7 @@ export default function EvaluationPipeline() {
       </div>
 
       {/* Step 1: Data Comparison */}
-      <Section title="Step 1: Original vs Smoothed Data" stepNumber={1}>
+      <Section title="Step 1: Original vs Simplified Output" stepNumber={1}>
         <p style={styles.text}>
           We have the Apple stock price dataset and we apply a <strong>Gaussian filter at level 50</strong>. 
         </p>
@@ -266,7 +266,7 @@ export default function EvaluationPipeline() {
         <ExampleCalculation />
 
         <div style={{ marginTop: '1.5rem' }}>
-          <h4 style={{ marginBottom: '0.5rem' }}>Letter Grade Assignment:</h4>
+          <h4 style={{ marginBottom: '0.5rem', color: '#7B1FA2' }}>Letter Grade Assignment:</h4>
           <GradeThresholds />
         </div>
       </Section>
@@ -278,18 +278,18 @@ export default function EvaluationPipeline() {
           To get an idea about how well an algorithm preserves a feature, we need an aggregated grade across datasets.
         </p>
 
-        <h3 style={{ fontSize: '1.3rem', marginTop: '2rem', marginBottom: '1rem', color: '#1976D2' }}>
+        <h3 style={{ fontSize: '1.3rem', marginTop: '2rem', marginBottom: '1rem', color: '#7B1FA2' }}>
           The Aggregation Process Across Datasets
         </h3>
 
         <div style={{ 
           marginTop: '1.5rem',
           padding: '1.5rem',
-          backgroundColor: '#e3f2fd',
+          backgroundColor: '#f3e5f5',
           borderRadius: '8px',
-          border: '2px solid #2196F3'
+          border: '2px solid #9C27B0'
         }}>
-          <h4 style={{ marginTop: 0, color: '#1565C0' }}>Example: Gaussian Filter + Level L¹</h4>
+          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>Example: Gaussian Filter + Level L¹</h4>
           <ol style={{ paddingLeft: '1.5rem', lineHeight: '1.8' }}>
             <li><strong>Repeat Steps 1-6 for all 80 datasets</strong>
               <ul style={{ marginTop: '0.5rem', color: '#666' }}>
@@ -315,12 +315,10 @@ export default function EvaluationPipeline() {
                 Final distribution: 74 A's, 6 F's
               </div>
             </li>
-            <li style={{ marginTop: '1rem' }}><strong>Convert to numeric values</strong>
+            <li style={{ marginTop: '1rem' }}><strong>Find the most common grade (mode)</strong>
               <div style={{ marginTop: '0.5rem', color: '#666' }}>
-                A=4, B=3, C=2, D=1, F=0
+                Count how many times each grade appears:
               </div>
-            </li>
-            <li style={{ marginTop: '1rem' }}><strong>Calculate mean</strong>
               <div style={{ 
                 marginTop: '0.5rem',
                 padding: '0.75rem',
@@ -329,87 +327,25 @@ export default function EvaluationPipeline() {
                 fontFamily: 'monospace',
                 fontSize: '0.95rem'
               }}>
-                Mean = (count_A × 4 + count_B × 3 + count_C × 2 + count_D × 1 + count_F × 0) / 80
+                A: 74 datasets<br/>
+                B: 0 datasets<br/>
+                C: 0 datasets<br/>
+                D: 0 datasets<br/>
+                F: 6 datasets
               </div>
             </li>
-            <li style={{ marginTop: '1rem' }}><strong>Convert back to letter grade</strong>
+            <li style={{ marginTop: '1rem' }}><strong>Select the grade with highest count</strong>
               <div style={{ marginTop: '0.5rem', color: '#666' }}>
-                ≥3.5 = A, ≥2.5 = B, ≥1.5 = C, ≥0.5 = D, &lt;0.5 = F
+                Grade A appears 74 times (most frequent) → <strong>Mode = A</strong>
+              </div>
+              <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                Note: If multiple grades have the same highest count (a tie), we highlight all common grades as the mode.
               </div>
             </li>
           </ol>
         </div>
 
-        <h3 style={{ fontSize: '1.3rem', marginTop: '2.5rem', marginBottom: '1rem', color: '#1976D2' }}>
-          Computing the Aggregated Grade
-        </h3>
-
-        <p style={styles.text}>
-          Now let's calculate the actual aggregated grade for Gaussian Filter + level_l1:
-        </p>
-
-        <div style={{ 
-          marginTop: '1.5rem',
-          padding: '1.5rem',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '8px',
-          border: '1px solid #ddd'
-        }}>
-          <div style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            <strong>Step 1: Count the grades</strong>
-          </div>
-          <div style={{ 
-            padding: '1rem',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '1rem',
-            marginBottom: '1.5rem'
-          }}>
-            A: 74 datasets<br/>
-            B: 0 datasets<br/>
-            C: 0 datasets<br/>
-            D: 0 datasets<br/>
-            F: 6 datasets
-          </div>
-
-          <div style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            <strong>Step 2: Calculate mean</strong>
-          </div>
-          <div style={{ 
-            padding: '1rem',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '1rem',
-            marginBottom: '1.5rem'
-          }}>
-            Mean = (74 × 4 + 0 × 3 + 0 × 2 + 0 × 1 + 6 × 0) / 80<br/>
-            Mean = (296 + 0 + 0 + 0 + 0) / 80<br/>
-            Mean = 296 / 80<br/>
-            Mean = <strong style={{ color: '#2E7D32' }}>3.7</strong>
-          </div>
-
-          <div style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            <strong>Step 3: Convert to letter grade</strong>
-          </div>
-          <div style={{ 
-            padding: '1rem',
-            backgroundColor: '#e8f5e9',
-            borderRadius: '4px',
-            fontSize: '1rem',
-            marginBottom: '0',
-            border: '2px solid #4CAF50'
-          }}>
-            3.7 ≥ 3.5 → <strong style={{ color: '#2E7D32', fontSize: '1.2rem' }}>Aggregated Grade: A</strong>
-          </div>
-        </div>
-
-        <p style={{ ...styles.text, marginTop: '1.5rem' }}>
-          This aggregated grade A tells us: <em>"Gaussian Filter preserves Level feature based on L¹ norm excellently across diverse datasets."</em>
-        </p>
-
-        <h3 style={{ fontSize: '1.3rem', marginTop: '2.5rem', marginBottom: '1rem', color: '#1976D2' }}>
+        <h3 style={{ fontSize: '1.3rem', marginTop: '2.5rem', marginBottom: '1rem', color: '#7B1FA2' }}>
           The Complete Algorithm × Metric Performance Matrix
         </h3>
 
@@ -420,9 +356,9 @@ export default function EvaluationPipeline() {
 
         <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
           <ImageCard 
-            title="Algorithm × Metric Mean Grades Heatmap"
-            src={getPlotUrl('/plots/fc_visualizations/algorithm_metric_average_grades_colored.svg')}
-            alt="Heatmap showing mean grades for all algorithm-metric combinations"
+            title="Algorithm × Metric Mode Grades Heatmap"
+            src={getPlotUrl('/plots/fc_visualizations/algorithm_metric_mode_grades.svg')}
+            alt="Heatmap showing mode grades for all algorithm-metric combinations"
             fullWidth
           />
         </div>
@@ -430,30 +366,30 @@ export default function EvaluationPipeline() {
         <div style={{ 
           marginTop: '1.5rem',
           padding: '1.5rem',
-          backgroundColor: '#e8f5e9',
+          backgroundColor: '#f3e5f5',
           borderRadius: '8px',
-          border: '2px solid #4CAF50'
+          border: '2px solid #9C27B0'
         }}>
-          <h4 style={{ marginTop: 0, color: '#2E7D32' }}>💡 Key Insight</h4>
+          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>💡 Key Insight</h4>
           <p style={{ margin: 0, color: '#666' }}>
             Each cell represents 80 datasets worth of evaluation. For example, the "Gaussian Filter + Level L¹" cell
-            shows the grade A (mean 3.7) we just calculated. This matrix reveals algorithm strengths and weaknesses 
-            across different visual features.
+            shows Grade A (appears 74 out of 80 times) — the most common outcome we just calculated. This matrix reveals algorithm strengths and weaknesses 
+            across different visual features based on typical performance.
           </p>
         </div>
       </Section>
 
-      {/* Step 8: Variance Calculation */}
-      <Section title="Step 8: Measuring Consistency with Variance" stepNumber={8}>
+      {/* Step 8: Deviation Calculation */}
+      <Section title="Step 8: Measuring Consistency with Mode and Deviation" stepNumber={8}>
         <p style={styles.text}>
-          The mean grade tells us average performance, but it doesn't reveal consistency. An algorithm might get 
-          40 A's and 40 F's (inconsistent) or 80 B's (very consistent) — both average to ~2.0, but behave very differently 
-          in practice.
+          The mode grade tells us the most common outcome, but it doesn't reveal consistency. An algorithm might get 
+          50 A's and 30 F's (mode=A, but inconsistent) or 75 A's and 5 B's (mode=A, very consistent) — both have 
+          the same mode, but behave very differently in practice.
         </p>
 
         <p style={styles.text}>
-          We calculate <strong>variance</strong> to quantify this spread. Variance measures how far each dataset's 
-          grade deviates from the mean:
+          We calculate <strong>deviation</strong> to quantify this spread. Deviation measures what percentage of datasets 
+          received grades different from the most common grade:
         </p>
 
         <div style={{ 
@@ -464,7 +400,7 @@ export default function EvaluationPipeline() {
           border: '2px solid #FF9800'
         }}>
           <div style={{ fontSize: '1.1rem', marginBottom: '1rem', textAlign: 'center' }}>
-            <strong>Variance Formula:</strong>
+            <strong>Deviation Formula:</strong>
           </div>
           <div style={{ 
             fontSize: '1.3rem', 
@@ -475,10 +411,10 @@ export default function EvaluationPipeline() {
             borderRadius: '4px',
             margin: '1rem 0'
           }}>
-            σ² = Σ(xᵢ - μ)² / n
+            Deviation = ((n - mode_count) / n) × 100%
           </div>
           <p style={{ fontSize: '0.95rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
-            where xᵢ = grade value for dataset i (A=4, B=3, C=2, D=1, F=0), μ = mean grade, n = 80 datasets
+            where n = total datasets (80), mode_count = number of datasets with the most common grade
           </p>
         </div>
 
@@ -489,7 +425,7 @@ export default function EvaluationPipeline() {
           borderRadius: '8px',
           border: '2px solid #9C27B0'
         }}>
-          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>Step-by-Step Variance Calculation Example</h4>
+          <h4 style={{ marginTop: 0, color: '#7B1FA2' }}>Step-by-Step Deviation Calculation Example</h4>
           
           <p style={{ fontSize: '1rem', margin: '1rem 0' }}>
             Suppose Gaussian Filter + level_l1 gets these grades across 80 datasets:
@@ -513,27 +449,24 @@ export default function EvaluationPipeline() {
                 borderRadius: '4px',
                 marginBottom: '0.5rem'
               }}>
-                60× A (4.0)<br/>
-                15× B (3.0)<br/>
-                5× C (2.0)<br/>
-                0× D, 0× F<br/><br/>
-                <strong>Step 1:</strong> Mean μ = (60×4 + 15×3 + 5×2) / 80 = 3.69<br/>
-                <strong>Step 2:</strong> Deviations:<br/>
-                &nbsp;&nbsp;60 datasets: (4.0 - 3.69)² = 0.096<br/>
-                &nbsp;&nbsp;15 datasets: (3.0 - 3.69)² = 0.476<br/>
-                &nbsp;&nbsp;5 datasets: (2.0 - 3.69)² = 2.856<br/>
-                <strong>Step 3:</strong> Variance:<br/>
-                &nbsp;&nbsp;σ² = (60×0.096 + 15×0.476 + 5×2.856) / 80<br/>
-                &nbsp;&nbsp;σ² = <strong style={{ color: '#4CAF50' }}>0.26</strong> ✓ Low variance
+                74× A<br/>
+                6× B<br/>
+                0× C, 0× D, 0× F<br/><br/>
+                <strong>Step 1:</strong> Find mode<br/>
+                &nbsp;&nbsp;Mode = A (appears 74 times)<br/>
+                <strong>Step 2:</strong> Calculate deviation:<br/>
+                &nbsp;&nbsp;Deviation = ((80 - 74) / 80) × 100%<br/>
+                &nbsp;&nbsp;Deviation = (6 / 80) × 100%<br/>
+                &nbsp;&nbsp;Deviation = <strong style={{ color: '#4CAF50' }}>7.5%</strong> ✓ Very low deviation
               </div>
               <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
-                <strong>Interpretation:</strong> Most datasets get A grades. Predictable and reliable behavior.
+                <strong>Interpretation:</strong> 92.5% of datasets get the mode grade (A). Highly predictable and reliable behavior.
               </p>
             </div>
 
             <div>
               <p style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#FF5722' }}>
-                Scenario 2: Inconsistent Performance
+                Scenario 2: Variable Performance
               </p>
               <div style={{ 
                 fontFamily: 'monospace', 
@@ -543,71 +476,32 @@ export default function EvaluationPipeline() {
                 borderRadius: '4px',
                 marginBottom: '0.5rem'
               }}>
-                30× A (4.0)<br/>
-                10× B (3.0)<br/>
-                15× C (2.0)<br/>
-                15× D (1.0)<br/>
-                10× F (0.0)<br/>
-                <strong>Step 1:</strong> Mean μ = (30×4 + 10×3 + 15×2 + 15×1 + 10×0) / 80 = 2.31<br/>
-                <strong>Step 2:</strong> Deviations:<br/>
-                &nbsp;&nbsp;30 datasets: (4.0 - 2.31)² = 2.856<br/>
-                &nbsp;&nbsp;10 datasets: (3.0 - 2.31)² = 0.476<br/>
-                &nbsp;&nbsp;15 datasets: (2.0 - 2.31)² = 0.096<br/>
-                &nbsp;&nbsp;15 datasets: (1.0 - 2.31)² = 1.716<br/>
-                &nbsp;&nbsp;10 datasets: (0.0 - 2.31)² = 5.336<br/>
-                <strong>Step 3:</strong> Variance:<br/>
-                &nbsp;&nbsp;σ² = (30×2.856 + ... + 10×5.336) / 80<br/>
-                &nbsp;&nbsp;σ² = <strong style={{ color: '#FF5722' }}>1.82</strong> ✗ High variance
+                30× A<br/>
+                15× B<br/>
+                15× C<br/>
+                15× D<br/>
+                5× F<br/>
+                <strong>Step 1:</strong> Find mode<br/>
+                &nbsp;&nbsp;Mode = A (appears 30 times)<br/>
+                <strong>Step 2:</strong> Calculate deviation:<br/>
+                &nbsp;&nbsp;Deviation = ((80 - 30) / 80) × 100%<br/>
+                &nbsp;&nbsp;Deviation = (50 / 80) × 100%<br/>
+                &nbsp;&nbsp;Deviation = <strong style={{ color: '#FF5722' }}>62.5%</strong> ✗ High deviation
               </div>
               <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
-                <strong>Interpretation:</strong> Grades spread from A to F. Unpredictable — works great on some data, fails on others.
+                <strong>Interpretation:</strong> Only 37.5% of datasets get the mode grade. Highly variable — works well on some data, poorly on others.
               </p>
             </div>
           </div>
         </div>
 
-        <div style={{ 
-          marginTop: '2rem',
-          padding: '1.5rem',
-          backgroundColor: '#e8f5e9',
-          borderRadius: '8px',
-          border: '2px solid #4CAF50'
-        }}>
-          <h4 style={{ marginTop: 0, color: '#2E7D32' }}>Interpreting Variance: What Counts as "Low" or "High"?</h4>
-          
-          <p style={{ margin: '0 0 1rem 0', color: '#444', fontSize: '1rem', lineHeight: '1.7' }}>
-            To understand what constitutes low or high variance, consider the theoretical range:
-          </p>
-          
-          <ul style={{ margin: '1rem 0', paddingLeft: '1.5rem', lineHeight: '1.8' }}>
-            <li>
-              <strong style={{ color: '#2E7D32' }}>Perfect consistency (σ² = 0.0):</strong> All 80 datasets get the exact same grade. 
-              For example, 80× A or 80× B.
-            </li>
-            <li>
-              <strong style={{ color: '#FF9800' }}>Moderate spread (σ² = 0.5-1.0):</strong> Grades cluster around 1-2 letter grades apart. 
-              For example, mostly A's and B's, or mostly B's and C's.
-            </li>
-            <li>
-              <strong style={{ color: '#FF5722' }}>Maximum inconsistency (σ² = 4.0):</strong> Half get A (4.0), half get F (0.0) — the most extreme split possible.
-            </li>
-          </ul>
-          
-          <p style={{ margin: '1rem 0 0 0', color: '#444', fontSize: '1rem', lineHeight: '1.7' }}>
-            From our 399 (19x21) algorithm-metric combinations, the variance distribution shows:<br/>
-            • <strong>Low variance (σ² ≤ 0.5):</strong> Grades stay within 1 letter grade of the mean. Reliable and predictable.<br/>
-            • <strong>Moderate variance (0.5 &lt; σ² &lt; 1.0):</strong> Some spread, but generally consistent within 2 letter grades.<br/>
-            • <strong>High variance (σ² ≥ 1.0):</strong> Grades span 3+ letter grades. Unpredictable behavior across datasets.
-          </p>
-        </div>
-
         <h3 style={{ fontSize: '1.3rem', marginTop: '2.5rem', marginBottom: '1rem', color: '#1976D2' }}>
-          The Complete Variance Table
+          The Complete Deviation Table
         </h3>
 
         <p style={styles.text}>
-          For all 399 algorithm-metric combinations, we compute variance alongside mean grades. The table below shows 
-          variance values for each combination, with darker shading indicating higher variance (less predictable performance):
+          For all 399 algorithm-metric combinations, we compute deviation alongside mode grades. The table uses 
+          three color thresholds to indicate consistency:
         </p>
 
         <div style={{ 
@@ -618,37 +512,89 @@ export default function EvaluationPipeline() {
           border: '2px solid #FF9800',
           marginBottom: '1.5rem'
         }}>
-          <h4 style={{ marginTop: 0, color: '#E65100', fontSize: '1.3rem' }}>Reading the Variance Table</h4>
+          <h4 style={{ marginTop: 0, color: '#E65100', fontSize: '1.3rem' }}>Deviation Color Map</h4>
           <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', lineHeight: '1.8', fontSize: '1rem' }}>
-            <li><strong>No shading (σ² &lt; 0.5):</strong> Low variance — grades stay within ~1 letter grade. <em>Consistent, predictable performance</em> across different data types.</li>
-            <li><strong>Light blue (0.5 ≤ σ² ≤ 1.5):</strong> Moderate variance — grades span ~2 letter grades. <em>Some data-dependency</em>; works well for most datasets but struggles with certain types.</li>
-            <li><strong>Dark blue (σ² &gt; 1.5):</strong> High variance — grades span 3+ letter grades. <em>Highly data-dependent, unpredictable performance</em>; excels on some datasets but completely fails on others.</li>
+            <li><strong style={{ color: '#ffcc66' }}>Light orange (&lt;25%):</strong> Highly predictable — more than 75% of datasets get the mode grade</li>
+            <li><strong style={{ color: '#ff9900' }}>Medium orange (25-50%):</strong> Generally reliable — 50-75% of datasets get the mode grade</li>
+            <li><strong style={{ color: '#e66600' }}>Dark orange (&gt;50%):</strong> Unpredictable — less than 50% of datasets get the mode grade</li>
           </ul>
-          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '1rem' }}>
-            <strong>Thresholds rationale:</strong> Based on empirical distribution across 399 algorithm-metric combinations 
-            (range: [0.012, 3.387]). These cutoffs categorize algorithms into "reliable for general use" vs 
-            "needs careful dataset matching" vs "unpredictable/specialized."
-          </p>
-          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '1rem' }}>
-            <strong>Example:</strong> Gaussian Filter + Level L¹ has variance <strong>1.12</strong> (light blue) because it gets 74 A's 
-            but 6 F's — excellent on most datasets but fails on a few specific ones.
+          <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.95rem' }}>
+            <strong>Note:</strong> Deviation measures consistency, not quality. An algorithm can be consistently excellent (&lt;25% deviation, mode=A) 
+            or consistently poor (&lt;25% deviation, mode=F). High deviation indicates variable behavior across different dataset types.
           </p>
         </div>
 
         <div style={{ marginTop: '2rem', marginBottom: '1.5rem' }}>
           <ImageCard 
-            title="Algorithm × Metric Variance Table"
-            src={getPlotUrl('/plots/pipeline/variance_table.svg')}
-            alt="Variance table showing consistency of each algorithm-metric combination"
+            title="Algorithm × Metric Deviation Table"
+            src={getPlotUrl('/plots/pipeline/deviation_table.svg')}
+            alt="Deviation table showing consistency of each algorithm-metric combination"
+            fullWidth
+          />
+        </div>
+      </Section>
+
+      {/* Summary Section */}
+      <Section title="Visual Summary: Grade Distribution and Deviation" stepNumber={9}>
+        <p style={{ fontSize: '1.1rem', lineHeight: '1.8', color: '#333', marginBottom: '1.5rem' }}>
+          The histogram grid visualization combines both key evaluation metrics into a single comprehensive view, 
+          showing how each algorithm-metric combination performs across all 80 datasets:
+        </p>
+
+        <div style={{
+          backgroundColor: '#f5f5f5',
+          padding: '1.5rem',
+          borderRadius: '8px',
+          marginBottom: '2rem',
+          border: '1px solid #ddd'
+        }}>
+          <h4 style={{ marginTop: 0, color: '#7B1FA2', fontSize: '1.3rem', marginBottom: '1rem' }}>Understanding the Histogram Grid</h4>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={{ margin: '0.5rem 0', fontSize: '1rem', lineHeight: '1.8' }}>
+              <strong style={{ color: '#7B1FA2' }}>Purple Histogram Bars (Grade Distribution):</strong> Show how many datasets 
+              received each letter grade (A, B, C, D, F). The height of each bar represents the count of datasets. 
+              The tallest bar indicates the <strong>mode grade</strong> — the most common outcome across all 80 datasets. 
+              <em>In case of a tie (two grades with equal counts), we highlight both grades as co-modes.</em>
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={{ margin: '0.5rem 0', fontSize: '1rem', lineHeight: '1.8' }}>
+              <strong style={{ color: '#E65100' }}>Orange Deviation Line (Consistency):</strong> The colored line below each histogram 
+              indicates how consistent the performance is. The color directly corresponds to the deviation percentage:
+            </p>
+            <ul style={{ margin: '0.5rem 0', paddingLeft: '2rem', lineHeight: '1.8', fontSize: '1rem' }}>
+              <li><strong>Light orange (&lt;25%):</strong> Most datasets agree on the same grade</li>
+              <li><strong>Medium orange (25-50%):</strong> Moderate agreement with some variation</li>
+              <li><strong>Dark orange (&gt;50%):</strong> High variation in grades across datasets</li>
+            </ul>
+          </div>
+
+          <div>
+            <p style={{ margin: '0.5rem 0', fontSize: '1rem', lineHeight: '1.8' }}>
+              <strong style={{ color: '#333' }}>Example Interpretation:</strong> If you see a histogram with one tall purple bar (grade A) 
+              and a light orange deviation line, it means the algorithm consistently earns A grades across most datasets — 
+              high quality <em>and</em> high consistency. Conversely, a histogram with bars spread across multiple grades 
+              and a dark orange line indicates unpredictable behavior.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '2rem', marginBottom: '1.5rem' }}>
+          <ImageCard 
+            title="Algorithm × Metric Grade Distribution with Deviation Indicators"
+            src={getPlotUrl('/plots/fc_visualizations/algorithm_metric_histogram_grid_mode.svg')}
+            alt="Histogram grid showing grade distribution (purple bars) and deviation (orange lines) for each algorithm-metric combination"
             fullWidth
           />
         </div>
 
         <div style={styles.insight}>
-          <strong>💡 Key Patterns:</strong> Variance measures <em>consistency</em>, not quality. High variance (&gt;1.5) 
-          means unpredictable behavior — an algorithm might excel on some datasets but completely fail on others 
-          (e.g., Max/Min/Median Filters on extrema metrics). Low variance (&lt;0.5) means predictable behavior — 
-          the algorithm performs similarly across all datasets (could be consistently good or consistently bad). 
+          <strong>🎯 Summary:</strong> This histogram grid is the complete evaluation snapshot — it shows both 
+          <em> what grade</em> algorithms typically receive (mode grade from tallest bar) and <em>how reliable</em> that 
+          grade is across different datasets (deviation from orange line color). Together, these metrics help identify 
+          algorithms that are both high-performing and consistently reliable across diverse time series types.
         </div>
       </Section>
 
@@ -841,17 +787,17 @@ function ExampleCalculation() {
           <ul style={{ margin: 0, paddingLeft: '1.5rem', lineHeight: '1.8', fontFamily: 'monospace' }}>
             <li>Excellent: 99</li>
             <li>Good: 1</li>
-            <li>Fair: 1</li>
+            <li>Fair: 0</li>
             <li>Poor: 0</li>
           </ul>
         </div>
         <div>
           <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Calculation:</p>
           <div style={{ fontFamily: 'monospace', fontSize: '0.95rem', lineHeight: '1.8' }}>
-            Score = (99×4 + 1×3 + 1×2 + 0×1) / 101<br/>
-            Score = (396 + 3 + 2 + 0) / 101<br/>
-            Score = 401 / 101<br/>
-            Score = <strong style={{ color: '#4CAF50' }}>3.97</strong> → Grade: <strong style={{ color: '#4CAF50' }}>A</strong>
+            Score = (99×4 + 1×3 + 0×2 + 0×1) / 101<br/>
+            Score = (396 + 3 + 0 + 0) / 101<br/>
+            Score = 399 / 100<br/>
+            Score = <strong style={{ color: '#4a1a7a' }}>3.99</strong> → Grade: <strong style={{ color: '#4a1a7a' }}>A</strong>
           </div>
         </div>
       </div>
@@ -861,11 +807,11 @@ function ExampleCalculation() {
 
 function GradeThresholds() {
   const thresholds = [
-    { grade: 'A', range: '≥ 3.4', color: '#006837', textColor: '#fff' },
-    { grade: 'B', range: '2.8 - 3.4', color: '#31a354', textColor: '#fff' },
-    { grade: 'C', range: '2.2 - 2.8', color: '#78c679', textColor: '#000' },
-    { grade: 'D', range: '1.6 - 2.2', color: '#c2e699', textColor: '#000' },
-    { grade: 'F', range: '< 1.6', color: '#ebfada', textColor: '#000' }
+    { grade: 'A', range: '≥ 3.4', color: '#4a1a7a', textColor: '#fff' },
+    { grade: 'B', range: '2.8 - 3.4', color: '#7340b8', textColor: '#fff' },
+    { grade: 'C', range: '2.2 - 2.8', color: '#9b6fd9', textColor: '#fff' },
+    { grade: 'D', range: '1.6 - 2.2', color: '#c9a8e8', textColor: '#000' },
+    { grade: 'F', range: '< 1.6', color: '#e6d5f5', textColor: '#000' }
   ];
 
   return (

@@ -5,51 +5,40 @@ import { getPlotUrl } from '../config/cdn';
 const GRADING_PLOTS = [
   {
     title: 'Algorithm Grades by Dataset',
-    description: 'Comprehensive heatmap showing letter grades (A+ to F) for each algorithm across all 80 datasets',
-    path: 'algorithm_grades_by_dataset_green.svg'
-  },
-  {
-    title: 'Algorithm Grade Distribution',
-    description: 'Bar chart showing the distribution of letter grades across all algorithms',
-    path: 'algorithm_grade_distribution_barchart.svg'
+    description: 'Purple heatmap showing mode grades for each algorithm across all 80 datasets (aggregated across metrics)',
+    path: 'algorithm_dataset_mode_grades.svg'
   },
   {
     title: 'Algorithm Performance by Metric',
-    description: 'Green heatmap showing average algorithm performance broken down by individual feature metrics',
-    path: 'algorithm_metric_average_grades_colored.svg'
-  },
-  {
-    title: 'Metric Grade Distribution',
-    description: 'Bar chart showing how difficult each metric is (grade distribution per metric type)',
-    path: 'metric_grade_distribution_barchart.svg'
+    description: 'Purple heatmap showing mode grades for each algorithm-metric combination (aggregated across datasets)',
+    path: 'algorithm_metric_mode_grades.svg'
   }
 ];
 
-// All available metrics with readable names
+// All available metrics with readable names (flat list, no noise_auc)
 const METRICS = [
-  { key: 'level_l1', label: 'Level (L1)', category: 'Level' },
-  { key: 'level_linf', label: 'Level (L∞)', category: 'Level' },
-  { key: 'mean_delta', label: 'Mean', category: 'Level' },
-  { key: 'extrema_bottleneck', label: 'Extrema (Bottleneck)', category: 'Shape' },
-  { key: 'extrema_wasserstein', label: 'Extrema (Wasserstein)', category: 'Shape' },
-  { key: 'regimes_delta', label: 'Regimes', category: 'Shape' },
-  { key: 'change_points_delta', label: 'Change Points', category: 'Shape' },
-  { key: 'spikes_dips_bottleneck', label: 'Spikes/Dips (Bottleneck)', category: 'Shape' },
-  { key: 'spikes_dips_wasserstein', label: 'Spikes/Dips (Wasserstein)', category: 'Shape' },
-  { key: 'slope_l1', label: 'Slope (L1)', category: 'Derivatives' },
-  { key: 'slope_linf', label: 'Slope (L∞)', category: 'Derivatives' },
-  { key: 'curvature_l1', label: 'Curvature (L1)', category: 'Derivatives' },
-  { key: 'curvature_linf', label: 'Curvature (L∞)', category: 'Derivatives' },
-  { key: 'roughness_delta', label: 'Roughness', category: 'Derivatives' },
-  { key: 'trend_l1', label: 'Trend (L1)', category: 'Frequency' },
-  { key: 'trend_linf', label: 'Trend (L∞)', category: 'Frequency' },
-  { key: 'noise_l1', label: 'Noise (L1)', category: 'Frequency' },
-  { key: 'noise_linf', label: 'Noise (L∞)', category: 'Frequency' },
-  { key: 'noise_auc_delta', label: 'Noise (AUC)', category: 'Frequency' },
-  { key: 'periodicity_amplitude_delta', label: 'Periodicity (Amplitude)', category: 'Frequency' },
-  { key: 'periodicity_num_periods_delta', label: 'Periodicity (# Periods)', category: 'Frequency' },
-  { key: 'regression_l1', label: 'Regression (L1)', category: 'Statistics' },
-  { key: 'regression_linf', label: 'Regression (L∞)', category: 'Statistics' }
+  { key: 'level_l1', label: 'Level (L1)' },
+  { key: 'level_linf', label: 'Level (L∞)' },
+  { key: 'mean_delta', label: 'Mean' },
+  { key: 'extrema_bottleneck', label: 'Extrema (Bottleneck)' },
+  { key: 'extrema_wasserstein', label: 'Extrema (Wasserstein)' },
+  { key: 'regimes_delta', label: 'Regimes' },
+  { key: 'change_points_delta', label: 'Change Points' },
+  { key: 'spikes_dips_bottleneck', label: 'Spikes/Dips (Bottleneck)' },
+  { key: 'spikes_dips_wasserstein', label: 'Spikes/Dips (Wasserstein)' },
+  { key: 'slope_l1', label: 'Slope (L1)' },
+  { key: 'slope_linf', label: 'Slope (L∞)' },
+  { key: 'curvature_l1', label: 'Curvature (L1)' },
+  { key: 'curvature_linf', label: 'Curvature (L∞)' },
+  { key: 'roughness_delta', label: 'Roughness' },
+  { key: 'trend_l1', label: 'Trend (L1)' },
+  { key: 'trend_linf', label: 'Trend (L∞)' },
+  { key: 'noise_l1', label: 'Noise (L1)' },
+  { key: 'noise_linf', label: 'Noise (L∞)' },
+  { key: 'periodicity_amplitude_delta', label: 'Periodicity (Amplitude)' },
+  { key: 'periodicity_num_periods_delta', label: 'Periodicity (# Periods)' },
+  { key: 'regression_l1', label: 'Regression (L1)' },
+  { key: 'regression_linf', label: 'Regression (L∞)' }
 ];
 
 export default function GradingPlotsGallery() {
@@ -60,13 +49,6 @@ export default function GradingPlotsGallery() {
   const handleImageLoad = (path: string) => {
     setLoadedImages(prev => new Set([...prev, path]));
   };
-
-  // Group metrics by category for organized dropdown
-  const metricsByCategory = METRICS.reduce((acc, metric) => {
-    if (!acc[metric.category]) acc[metric.category] = [];
-    acc[metric.category].push(metric);
-    return acc;
-  }, {} as Record<string, typeof METRICS>);
 
   return (
     <div style={{
@@ -304,14 +286,10 @@ export default function GradingPlotsGallery() {
                 onFocus={(e) => e.currentTarget.style.borderColor = '#1E88E5'}
                 onBlur={(e) => e.currentTarget.style.borderColor = '#e0e0e0'}
               >
-                {Object.entries(metricsByCategory).map(([category, metrics]) => (
-                  <optgroup key={category} label={category}>
-                    {metrics.map(metric => (
-                      <option key={metric.key} value={metric.key}>
-                        {metric.label}
-                      </option>
-                    ))}
-                  </optgroup>
+                {METRICS.map(metric => (
+                  <option key={metric.key} value={metric.key}>
+                    {metric.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -335,23 +313,10 @@ export default function GradingPlotsGallery() {
                   fontSize: 18,
                   fontWeight: 600,
                   color: '#333',
-                  marginBottom: 4
+                  marginBottom: 0
                 }}>
                   {METRICS.find(m => m.key === selectedMetric)?.label}
                 </h3>
-                <span style={{
-                  display: 'inline-block',
-                  padding: '4px 10px',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  backgroundColor: '#E3F2FD',
-                  color: '#1E88E5',
-                  borderRadius: 4,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  {METRICS.find(m => m.key === selectedMetric)?.category}
-                </span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -439,79 +404,6 @@ export default function GradingPlotsGallery() {
                 }}
               />
             </div>
-          </div>
-        </div>
-
-        {/* CSV Data Tables */}
-        <div style={{
-          marginTop: 48,
-          padding: 24,
-          backgroundColor: '#fff',
-          borderRadius: 8,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: '#333',
-            marginBottom: 16
-          }}>
-            📋 Data Tables
-          </h2>
-          <p style={{
-            fontSize: 14,
-            color: '#666',
-            marginBottom: 16
-          }}>
-            Download raw grading data in CSV format:
-          </p>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-            gap: 12
-          }}>
-            {[
-              'algorithm_grade_summary.csv',
-              'algorithm_ranking_by_gpa.csv',
-              'dataset_algorithm_grades.csv',
-              'dataset_algorithm_metric_grades.csv',
-              'metric_difficulty.csv',
-              'algorithm_performance_by_category.csv',
-              'algorithm_overall_consistency.csv'
-            ].map((csv, idx) => (
-              <a
-                key={idx}
-                href={getPlotUrl(`fc_visualizations/${csv}`)}
-                download
-                style={{
-                  padding: '10px 16px',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  border: '1px solid #e0e0e0',
-                  backgroundColor: '#fff',
-                  color: '#333',
-                  borderRadius: 4,
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f5f5f5';
-                  e.currentTarget.style.borderColor = '#1E88E5';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#fff';
-                  e.currentTarget.style.borderColor = '#e0e0e0';
-                }}
-              >
-                <span>📄</span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {csv.replace(/_/g, ' ').replace('.csv', '')}
-                </span>
-              </a>
-            ))}
           </div>
         </div>
       </div>
