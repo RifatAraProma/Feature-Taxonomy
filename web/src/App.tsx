@@ -158,16 +158,21 @@ export default function App(){
             
             allLevels[levelData.level] = {
               yhat: yhat,
-              params: {[data.paramName]: levelData.paramValue},
+              params: {[levelData.paramName || data.paramName]: levelData.paramValue},
               banking: {aspect: 1.0, heightPx: 0},
               features: features,  // Store features with x-coordinates added
               metrics: {
                 featurePreservation: levelData.featurePreservation || {}
               },
               pae: levelData.pae,
-              paramName: data.paramName,
+              paramName: levelData.paramName || data.paramName,
               paramValue: levelData.paramValue
             };
+            
+            // Debug log for first few levels
+            if (levelData.level < 3) {
+              console.log(`[DEBUG] Level ${levelData.level} - paramName from levelData: ${levelData.paramName}, from data: ${data.paramName}`);
+            }
           }
           
           // Now add "original" (level 0) features to all levels
@@ -185,11 +190,12 @@ export default function App(){
         const initialLevel = (param >= 0 && param < data.numLevels) ? param : 0;
         
         const paramInfo = allLevels[initialLevel] ? {
-          name: allLevels[initialLevel].paramName,
+          name: allLevels[initialLevel].paramName || 'parameter',
           value: allLevels[initialLevel].paramValue
         } : null;
         
         console.log(`[PRECOMPUTED] Setting parameterInfo for level ${initialLevel}:`, paramInfo);
+        console.log(`[PRECOMPUTED] allLevels[${initialLevel}]:`, allLevels[initialLevel]);
         
         setPrecomputedInfo({
           available: true,

@@ -70,10 +70,12 @@ class PrecomputedLoader:
             self.metadata_cache[cache_key] = None
             return None
         
-        # Load first level file to get parameter name
+        # Load level 1 file to get parameter name (level 0 is original data with param_name="none")
         first_level_data = None
         try:
-            with open(level_files[0], 'r') as f:
+            # Use level 1 instead of level 0 to get actual algorithm parameter name
+            level_file_to_read = level_files[1] if len(level_files) > 1 else level_files[0]
+            with open(level_file_to_read, 'r') as f:
                 first_level_data = json.load(f)
         except Exception as e:
             print(f"Error loading first level for {algorithm}: {e}")

@@ -135,6 +135,59 @@ export default function Controls(p: Props) {
           {paramInfo.label}
         </h3>
         
+        {/* Parameter Value Display */}
+        {p.precomputedInfo?.parameterInfo && p.param > 0 && (() => {
+          console.log('[CONTROLS] Parameter Info:', p.precomputedInfo.parameterInfo);
+          return (
+          <div style={{
+            marginBottom: 8,
+            padding: 10,
+            backgroundColor: '#E8F5E9',
+            border: '2px solid #4CAF50',
+            borderRadius: 6
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#2E7D32',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: 6
+            }}>
+              Current Parameter
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{
+                fontSize: 14,
+                color: '#1B5E20',
+                fontWeight: 700
+              }}>
+                {p.precomputedInfo.parameterInfo.name || 'parameter'}:
+              </span>
+              <div style={{
+                padding: '4px 12px',
+                backgroundColor: '#fff',
+                border: '2px solid #4CAF50',
+                borderRadius: 4,
+                fontWeight: 700,
+                fontSize: 15,
+                color: '#2E7D32'
+              }}>
+                {typeof p.precomputedInfo.parameterInfo.value === 'number' 
+                  ? p.precomputedInfo.parameterInfo.value.toFixed(3)
+                  : (p.precomputedInfo.parameterInfo.value || 'N/A')
+                }
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+        
         {/* PAE Value Display */}
         {p.paeValue !== null && (
           <div style={{
