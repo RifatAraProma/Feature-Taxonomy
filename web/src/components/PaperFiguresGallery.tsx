@@ -1,247 +1,235 @@
 import React from 'react';
 import { getPlotUrl } from '../config/cdn';
 
-// Paper figures from plots/paper figures/
+// Paper figures from plots/paper  figures/
 const PAPER_FIGURES = [
   {
-    title: 'Figure 1a',
-    description: 'Overview',
-    path: 'Fig 1 a.pdf',
+    title: 'Fig 1',
+    description: 'Feature taxonomy overview',
+    path: 'Fig 1.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 1b (Chebyshev)',
-    description: 'Chebyshev filter example',
-    path: 'Fig 1 b chebyshev.pdf',
+    title: 'Fig 2 input',
+    description: 'Input time series',
+    path: 'Fig 2 input.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 1b (Douglas-Peucker)',
-    description: 'Douglas-Peucker simplification example',
-    path: 'Fig 1 b douglas-peucker.pdf',
-    category: 'Main Figures'
-  },
-  {
-    title: 'Figure 1b (Gaussian)',
+    title: 'Fig 2 gaussian',
     description: 'Gaussian filter example',
-    path: 'Fig 1 b gaussian.pdf',
+    path: 'Fig 2 gaussian.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 1b (PAA)',
+    title: 'Fig 2 chebyshev',
+    description: 'Chebyshev filter example',
+    path: 'Fig 2 chebyshev.svg',
+    category: 'Main Figures'
+  },
+  {
+    title: 'Fig 2 douglas-peucker',
+    description: 'Douglas-Peucker simplification example',
+    path: 'Fig 2 douglas-peucker.svg',
+    category: 'Main Figures'
+  },
+  {
+    title: 'Fig 2 paa',
     description: 'Piecewise Aggregate Approximation example',
-    path: 'Fig 1 b paa.pdf',
+    path: 'Fig 2 paa.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 1b (Uniform Subsample)',
+    title: 'Fig 2 uniform-subsample',
     description: 'Uniform subsampling example',
-    path: 'Fig 1 b uniform-subsample.pdf',
+    path: 'Fig 2 uniform-subsample.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 1c',
-    description: 'Feature taxonomy',
-    path: 'Fig 1 c.pdf',
+    title: 'Fig 2 asap',
+    description: 'ASAP aggregation example',
+    path: 'Fig 2 asap.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 2a',
-    description: 'Algorithm performance',
-    path: 'Fig 2 a.pdf',
-    category: 'Main Figures'
-  },
-  {
-    title: 'Figure 2b',
-    description: 'Feature preservation comparison',
-    path: 'Fig 2 b.pdf',
-    category: 'Main Figures'
-  },
-  {
-    title: 'Figure 2c',
-    description: 'Dataset characteristics',
-    path: 'Fig 2 c.pdf',
-    category: 'Main Figures'
-  },
-  {
-    title: 'Figure 3a',
+    title: 'Fig 3 a',
     description: 'Performance by dataset type',
-    path: 'Fig 3 a.pdf',
+    path: 'Fig 3 a.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 3b',
+    title: 'Fig 3 b',
     description: 'Algorithm specialization',
-    path: 'Fig 3 b.pdf',
+    path: 'Fig 3 b.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 3c',
+    title: 'Fig 3 c',
     description: 'Feature category breakdown',
-    path: 'Fig 3 c.pdf',
+    path: 'Fig 3 c.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4a',
+    title: 'Fig 4 a',
     description: 'Grading methodology',
-    path: 'Fig 4 a.pdf',
+    path: 'Fig 4 a.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4b',
+    title: 'Fig 4 b',
     description: 'Grade distribution',
-    path: 'Fig 4 b.pdf',
+    path: 'Fig 4 b.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4c',
+    title: 'Fig 4 c',
     description: 'Algorithm ranking',
-    path: 'Fig 4 c.pdf',
+    path: 'Fig 4 c.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4d',
+    title: 'Fig 4 d',
     description: 'Dataset difficulty',
-    path: 'Fig 4 d.pdf',
+    path: 'Fig 4 d.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4e',
+    title: 'Fig 4 e',
     description: 'Performance consistency',
-    path: 'Fig 4 e.pdf',
+    path: 'Fig 4 e.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4f',
+    title: 'Fig 4 f',
     description: 'Feature-wise grades',
-    path: 'Fig 4 f.pdf',
+    path: 'Fig 4 f.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4g',
+    title: 'Fig 4 g',
     description: 'Metric comparison',
-    path: 'Fig 4 g.pdf',
+    path: 'Fig 4 g.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 4h',
+    title: 'Fig 4 h',
     description: 'Statistical analysis',
-    path: 'Fig 4 h.pdf',
+    path: 'Fig 4 h.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 5a',
+    title: 'Fig 4 i',
+    description: 'Additional analysis',
+    path: 'Fig 4 i.svg',
+    category: 'Main Figures'
+  },
+  {
+    title: 'Fig 5 a',
     description: 'Case study A',
-    path: 'Fig 5 a.pdf',
+    path: 'Fig 5 a.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 5b',
+    title: 'Fig 5 b',
     description: 'Case study B',
-    path: 'Fig 5 b.pdf',
+    path: 'Fig 5 b.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 5c',
+    title: 'Fig 5 c',
     description: 'Case study C',
-    path: 'Fig 5 c.pdf',
+    path: 'Fig 5 c.svg',
     category: 'Main Figures'
   },
   {
-    title: 'Figure 6',
-    description: 'Conclusions and future work',
-    path: 'Fig 6.pdf',
+    title: 'Fig 6 a',
+    description: 'Conclusions part A',
+    path: 'Fig 6 a.svg',
+    category: 'Main Figures'
+  },
+  {
+    title: 'Fig 6 b',
+    description: 'Conclusions part B',
+    path: 'Fig 6 b.svg',
+    category: 'Main Figures'
+  },
+  {
+    title: 'Fig 6 c',
+    description: 'Conclusions part C',
+    path: 'Fig 6 c.svg',
     category: 'Main Figures'
   },
   {
     title: 'Level Features',
     description: 'Point values and interval averages',
-    path: 'level.pdf',
+    path: 'feature illustrations/level.svg',
     category: 'Feature Details'
   },
   {
     title: 'Extrema',
     description: 'Local peaks and valleys',
-    path: 'extrema.pdf',
+    path: 'feature illustrations/extrema.svg',
     category: 'Feature Details'
   },
   {
     title: 'Regime & Change Points',
     description: 'Structural changes in time series',
-    path: 'regime_change_points.pdf',
+    path: 'feature illustrations/regime_change_points.svg',
     category: 'Feature Details'
   },
   {
     title: 'Spikes & Dips',
     description: 'Anomalous points detection',
-    path: 'spikes_dips.pdf',
+    path: 'feature illustrations/spikes_dips.svg',
     category: 'Feature Details'
   },
   {
     title: 'Slope',
     description: 'First derivative analysis',
-    path: 'slope.pdf',
+    path: 'feature illustrations/slope.svg',
     category: 'Feature Details'
   },
   {
     title: 'Curvature',
     description: 'Second derivative analysis',
-    path: 'curvature.pdf',
+    path: 'feature illustrations/curvature.svg',
     category: 'Feature Details'
   },
   {
     title: 'Roughness',
     description: 'High-frequency variation',
-    path: 'roughness.pdf',
+    path: 'feature illustrations/roughness.svg',
     category: 'Feature Details'
   },
   {
     title: 'Trend',
     description: 'Long-term directional movement',
-    path: 'trend.pdf',
+    path: 'feature illustrations/trend.svg',
     category: 'Feature Details'
   },
   {
     title: 'Noise',
     description: 'Random fluctuation analysis',
-    path: 'noise.pdf',
+    path: 'feature illustrations/noise.svg',
     category: 'Feature Details'
   },
   {
     title: 'Periodicity',
     description: 'Cyclic pattern detection',
-    path: 'periodicity.pdf',
+    path: 'feature illustrations/periodicity.svg',
     category: 'Feature Details'
   },
   {
     title: 'Mean',
     description: 'Central tendency',
-    path: 'mean.pdf',
+    path: 'feature illustrations/mean.svg',
     category: 'Feature Details'
   },
   {
     title: 'Regression Fit',
     description: 'Linear trend approximation',
-    path: 'regression_fit.pdf',
+    path: 'feature illustrations/regression_fit.svg',
     category: 'Feature Details'
-  },
-  {
-    title: 'FC Distribution (Normalized)',
-    description: 'Distribution of normalized FC scores across all simplification levels',
-    path: 'pdf24_converted (6)/level_l1_fc_distribution.pdf',
-    category: 'FC Analysis'
-  },
-  {
-    title: 'Raw L1 Error (Normalized)',
-    description: 'Raw L1 error distribution without FC score transformation',
-    path: 'pdf24_converted (6)/level_l1_raw.pdf',
-    category: 'FC Analysis'
-  },
-  {
-    title: 'Z-Score FC Distribution (Normalized)',
-    description: 'Z-score normalized FC scores for statistical analysis',
-    path: 'pdf24_converted (6)/level_l1_zscore_fc.pdf',
-    category: 'FC Analysis'
   }
 ];
 
@@ -392,12 +380,12 @@ export default function PaperFiguresGallery() {
                       e.currentTarget.style.color = '#666';
                     }}
                   >
-                    Download PDF
+                    Download SVG
                   </a>
                 </div>
               </div>
 
-              {/* Preview - Download Placeholder for PDF */}
+              {/* Preview - SVG Embedded */}
               <div style={{
                 padding: 24,
                 backgroundColor: '#fafafa',
@@ -405,64 +393,35 @@ export default function PaperFiguresGallery() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: 400,
-                gap: 16
+                minHeight: 400
               }}>
-                <div style={{
-                  fontSize: 64,
-                  marginBottom: 16
-                }}>📄</div>
-                <div style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: '#333',
-                  marginBottom: 8
-                }}>PDF Document</div>
-                <div style={{
-                  fontSize: 14,
-                  color: '#666',
-                  textAlign: 'center',
-                  maxWidth: 400
-                }}>
-                  Click "View Full Size" to open in a new window, or "Download PDF" to save locally
-                </div>
+                <img 
+                  src={getPlotUrl(`paper  figures/${encodeURIComponent(figure.path)}`)} 
+                  alt={figure.title}
+                  style={{
+                    maxWidth: '100%',
+                    height: 'auto',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: 4
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = `
+                      <div style="text-align: center; color: #999; font-size: 14px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🖼️</div>
+                        <div>SVG Preview</div>
+                        <div style="margin-top: 8px; font-size: 12px;">Click "View Full Size" to view the figure</div>
+                      </div>
+                    `;
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
-
-        {/* Info Box */}
-        <div style={{
-          marginTop: 48,
-          padding: 24,
-          backgroundColor: '#FFF3E0',
-          borderLeft: '4px solid #FF9800',
-          borderRadius: 4
-        }}>
-          <h3 style={{
-            fontSize: 16,
-            fontWeight: 600,
-            color: '#E65100',
-            marginBottom: 8
-          }}>
-            📐 Figure Specifications
-          </h3>
-          <ul style={{
-            fontSize: 14,
-            color: '#666',
-            lineHeight: 1.8,
-            marginLeft: 20
-          }}>
-            <li><strong>Format:</strong> PDF (publication-ready, vector graphics)</li>
-            <li><strong>Font Sizes:</strong> 22px base text, 26px bold titles</li>
-            <li><strong>Spacing:</strong> Optimized for print publication (adequate margins between labels and axes)</li>
-            <li><strong>Canvas Dimensions:</strong> 1400px × 900px (annotated), 1100px × 900px (standard)</li>
-            <li><strong>ViewBox:</strong> 1200 × 900 coordinate system</li>
-          </ul>
-        </div>
       </div>
 
-      {/* Fullscreen Modal - Removed since PDFs open in new tab */}
+      {/* Fullscreen Modal - Removed since SVGs open in new tab */}
     </div>
   );
 }

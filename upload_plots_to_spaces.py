@@ -69,8 +69,18 @@ def upload_directory(local_dir, bucket_name, prefix=''):
         # Construct S3 key (path in bucket)
         s3_key = f"{prefix}/{relative_path}".replace('\\', '/') if prefix else str(relative_path).replace('\\', '/')
         
-        # Skip if already exists
-        if s3_key in existing_keys:
+        # Force upload certain files (ignore if they exist)
+        force_upload = (
+            'paper  figures' in str(relative_path) or  # All paper figures (SVGs)
+            'by_metric' in str(relative_path) or  # All by_metric folder files
+            'algorithm_metric_histogram_grid_mode.svg' in str(relative_path) or
+            'algorithm_metric_histogram_grid_mode.pdf' in str(relative_path) or
+            'algorithm_metric_deviation_table.svg' in str(relative_path) or
+            'algorithm_metric_deviation_table.pdf' in str(relative_path)
+        )
+        
+        # Skip if already exists (unless force upload)
+        if s3_key in existing_keys and not force_upload:
             skipped += 1
             if (uploaded + skipped) % 100 == 0:
                 progress = ((uploaded + skipped) / len(files)) * 100
