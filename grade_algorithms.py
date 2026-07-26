@@ -684,7 +684,7 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
                 cmap = sns.color_palette(['#2d2d2d', '#525252', '#7a7a7a', '#a8a8a8', '#d6d6d6'], as_cmap=True)
             else:  # colored
                 from matplotlib.colors import ListedColormap
-                colors = ["#ebfada", '#c2e699','#78c679', '#31a354', '#006837']  # F, D, C, B, A
+                colors = ["#e6d5f5", '#c9a8e8','#9b6fd9', '#7340b8', '#4a1a7a']  # F, D, C, B, A (purple)
                 cmap = ListedColormap(colors)
             
             sns.heatmap(
@@ -705,8 +705,8 @@ def create_metric_heatmaps(grades_df, output_dir='plots/fc_visualizations/by_met
             if version == 'colored':
                 for text in ax.texts:
                     grade = text.get_text()
-                    # Use white text for A and B (dark green), black for C, D, F (lighter greens)
-                    if grade in ['A', 'B']:
+                    # Use white text for A, B, C (dark/medium purple), black for D, F (light purple)
+                    if grade in ['A', 'B', 'C']:
                         text.set_color('white')
                     else:
                         text.set_color('black')

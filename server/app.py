@@ -41,6 +41,17 @@ CORS(app)  # Enable CORS for all routes to allow CDN access
 def datasets():
     return jsonify(list_datasets())
 
+@app.route("/datasets.json", methods=["GET"])
+def datasets_json():
+    """Serve datasets.json file for frontend"""
+    import json
+    datasets_file = Path(__file__).parent.parent / "datasets.json"
+    if datasets_file.exists():
+        with open(datasets_file, 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    return jsonify([]), 404
+
 @app.route("/series/<sid>", methods=["GET"])
 def series(sid):
     s = load_series(sid)
@@ -101,12 +112,14 @@ def precomputed_info(sid, algorithm):
         if has_data:
             info = get_algorithm_info(sid, algorithm)
             print(f"[PRECOMPUTED] get_algorithm_info returned: {info}")
+            print(f"[PRECOMPUTED] info['param_name'] = {info.get('param_name')}")
             
             # Load ALL level outputs at once for smooth slider interaction (0-based levels)
             all_outputs = []
             for level in range(info['num_levels']):
                 level_data = get_precomputed_output(sid, algorithm, level)
                 if level_data:
+                    print(f"[DEBUG] Level {level} param_name: {level_data.get('param_name')}, param_value: {level_data.get('param_value')}")
                     all_outputs.append({
                         'level': level,
                         'output': level_data['output'],
