@@ -95,6 +95,10 @@ def main() -> int:
     )
     parser.add_argument("--title", help="Release title (default: derived from the tag).")
     parser.add_argument(
+        "--target",
+        help="Branch or commit the new tag should point at (default: the repo's default branch).",
+    )
+    parser.add_argument(
         "--draft", action="store_true", help="Create the release as a draft for review before going public."
     )
     parser.add_argument(
@@ -146,6 +150,8 @@ def main() -> int:
         print(f"Creating release {args.tag} on {args.repo}...")
         cmd = ["gh", "release", "create", args.tag, "-R", args.repo,
                "--title", title, "--notes-file", str(notes_file)]
+        if args.target:
+            cmd += ["--target", args.target]
         if args.draft:
             cmd.append("--draft")
         created = run(cmd)
