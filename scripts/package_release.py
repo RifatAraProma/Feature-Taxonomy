@@ -178,15 +178,17 @@ def write_manifest(output_dir: Path, built: list[tuple[Bundle, Path]]) -> Path:
         "bundles": entries,
     }
 
+    # Both files are published artifacts that readers consume on Linux/macOS, so they
+    # are written with LF endings explicitly -- CRLF would make `sha256sum -c` reject
+    # every line when this script runs on Windows.
     manifest_path = output_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    with manifest_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(manifest, indent=2) + "\n")
 
     # A plain checksum file so readers can run `sha256sum -c SHA256SUMS.txt`.
     sums_path = output_dir / "SHA256SUMS.txt"
-    sums_path.write_text(
-        "".join(f"{entry['sha256']}  {entry['file']}\n" for entry in entries),
-        encoding="utf-8",
-    )
+    with sums_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.writelines(f"{entry['sha256']}  {entry['file']}\n" for entry in entries)
 
     print(f"  manifest.json and SHA256SUMS.txt written to {output_dir.name}/")
     return manifest_path

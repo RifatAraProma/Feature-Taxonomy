@@ -50,8 +50,11 @@ every bundle:
 
 ```bash
 curl -LO https://github.com/RifatAraProma/Feature-Taxonomy/releases/latest/download/SHA256SUMS.txt
-sha256sum -c SHA256SUMS.txt
+sha256sum -c --ignore-missing SHA256SUMS.txt
 ```
+
+`--ignore-missing` checks only the bundles you actually downloaded; without it,
+`sha256sum` reports an error for every bundle you skipped.
 
 ### What is not distributed
 
