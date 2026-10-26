@@ -6,8 +6,10 @@
 import type { FeatureScales } from '../types/scales';
 import { CDN_BASE_URL } from '../config/cdn';
 
-// Deprecated: No longer using Railway backend - fetching everything from CDN
-// const API_BASE = import.meta.env.VITE_API_URL || '';
+// The hosted backend has been retired. Static assets come from local paths (or
+// VITE_CDN_URL); anything still dynamic is served by a locally running Flask app,
+// so the API base defaults to a relative path.
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /**
  * Fetch global feature preservation scales for a dataset

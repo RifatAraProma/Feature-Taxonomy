@@ -1,15 +1,22 @@
-// CDN configuration for accessing precomputed data and plots
-export const CDN_BASE_URL = import.meta.env.VITE_CDN_URL || 'https://feature-taxonomy-precomputed.sfo3.cdn.digitaloceanspaces.com';
+// Asset locations for precomputed data and plots.
+//
+// This project used to serve plots and precomputed output from a paid CDN. That
+// deployment has been retired; figures and data files are now published for free as
+// GitHub Release assets, and the UI runs locally against locally generated output.
+//
+// Set VITE_CDN_URL to a base URL if you host the assets somewhere yourself.
+// With it unset, every asset is read from local paths served by the Flask backend.
+export const CDN_BASE_URL = import.meta.env.VITE_CDN_URL || '';
 
-// Detect if running locally
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+// Where readers download the published figures and data bundles.
+export const ARCHIVE_URL = 'https://github.com/RifatAraProma/Feature-Taxonomy/releases/latest';
 
 export const CDN_URLS = {
-  precomputed: `${CDN_BASE_URL}/precomputed`,
-  plots: isLocal ? '/plots' : `${CDN_BASE_URL}/plots`,  // Use local plots in dev, CDN in production
+  precomputed: CDN_BASE_URL ? `${CDN_BASE_URL}/precomputed` : '/precomputed',
+  plots: CDN_BASE_URL ? `${CDN_BASE_URL}/plots` : '/plots',
 };
 
-// Helper to construct CDN URLs
+// Helper to construct precomputed data URLs
 export function getPrecomputedUrl(dataset: string, algorithm: string) {
   return `${CDN_URLS.precomputed}/${dataset}/${algorithm}.json`;
 }
@@ -17,12 +24,6 @@ export function getPrecomputedUrl(dataset: string, algorithm: string) {
 export function getPlotUrl(path: string) {
   // Remove leading slash if present
   const cleanPath = path.startsWith('/plots/') ? path.substring(7) : path;
-  
-  // Local development: use Vite proxy to Flask backend
-  if (isLocal) {
-    return `/plots/${cleanPath}`;
-  }
-  
-  // Production: use CDN
+
   return `${CDN_URLS.plots}/${cleanPath}`;
 }

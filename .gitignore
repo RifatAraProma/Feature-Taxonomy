@@ -68,6 +68,7 @@ Thumbs.db
 *.tar
 *.gz
 *.tgz
+release/
 
 precomputed
 plots
